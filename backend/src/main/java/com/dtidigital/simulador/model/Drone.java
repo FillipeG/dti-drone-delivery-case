@@ -17,7 +17,8 @@ import java.util.UUID;
 public class Drone {
 
     @Id
-    private String id = UUID.randomUUID().toString();
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
     @NotNull(message = "A capacidade de peso é obrigatória")
     @Positive(message = "A capacidade deve ser positiva")

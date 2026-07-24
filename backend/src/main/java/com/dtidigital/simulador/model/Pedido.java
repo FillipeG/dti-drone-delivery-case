@@ -17,7 +17,8 @@ import java.util.UUID;
 public class Pedido {
 
     @Id
-    private String id = UUID.randomUUID().toString();
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
     @NotNull(message = "A coordenada X é obrigatória")
     private Double coordenadaX;

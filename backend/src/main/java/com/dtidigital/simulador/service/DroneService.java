@@ -21,6 +21,10 @@ public class DroneService {
         if(drone.getBateriaAtual() == null){
             drone.setBateriaAtual(drone.getAutonomiaMaximaKm());
         }
+
+        if (drone.getStatus() == null) {
+            drone.setStatus(StatusDrone.IDLE);
+        }
         return droneRepository.save(drone);
     }
 
