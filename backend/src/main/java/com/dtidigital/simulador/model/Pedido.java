@@ -33,5 +33,12 @@ public class Pedido {
     @NotNull(message = "A prioridade é obrigatória")
     @Enumerated(EnumType.STRING)
     private Prioridade prioridade;
+
+    @Enumerated(EnumType.STRING)
+    private StatusPedido status = StatusPedido.PENDENTE;
+
+    @ManyToOne
+    @JoinColumn(name = "drone_id")
+    private Drone droneAlocado;
     
 }
