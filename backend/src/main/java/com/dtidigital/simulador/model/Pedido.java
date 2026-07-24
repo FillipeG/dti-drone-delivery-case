@@ -40,5 +40,7 @@ public class Pedido {
     @ManyToOne
     @JoinColumn(name = "drone_id")
     private Drone droneAlocado;
+
+    private Double tempoEstimadoMinutos;
     
 }

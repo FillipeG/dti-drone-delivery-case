@@ -37,5 +37,10 @@ public class DroneController {
     public ResponseEntity<List<Drone>> listarEmUso(){
         return ResponseEntity.ok(droneService.listarEmUso());
     }
+
+    @PutMapping("/{id}/recarregar")
+    public ResponseEntity<Drone> recarregar(@PathVariable String id) {
+        return ResponseEntity.ok(droneService.recarregarBateria(id));
+    }
     
 }

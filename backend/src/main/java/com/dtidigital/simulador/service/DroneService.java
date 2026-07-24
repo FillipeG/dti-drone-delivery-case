@@ -50,5 +50,14 @@ public class DroneService {
         drone.setStatus(novoStatus);
         return droneRepository.save(drone);
     }
+
+    public Drone recarregarBateria(String id) {
+        Drone drone = droneRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Drone não encontrado"));
+        
+        drone.setBateriaAtual(drone.getAutonomiaMaximaKm());
+        drone.setStatus(StatusDrone.IDLE);
+        return droneRepository.save(drone);
+    }
     
 }

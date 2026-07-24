@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
 
 import java.util.List;
 
@@ -29,6 +30,22 @@ public class PedidoController {
     @GetMapping
     public ResponseEntity<List<Pedido>> listarTodos(){
         return ResponseEntity.ok(pedidoService.listarTodos());
+    }
+
+    @PutMapping("/{id}/concluir")
+    public ResponseEntity<Pedido> concluirEntrega(@PathVariable String id) {
+        return ResponseEntity.ok(pedidoService.concluirEntrega(id));
+    }
+
+    @PostMapping("/processar-fila")
+    public ResponseEntity<Void> processarFila() {
+        pedidoService.processarFila();
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/dashboard")
+    public ResponseEntity<Map<String, Object>> obterDashboard() {
+        return ResponseEntity.ok(pedidoService.obterDashboard());
     }
     
 }
