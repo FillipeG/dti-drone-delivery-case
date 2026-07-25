@@ -1,7 +1,9 @@
 package com.dtidigital.simulador.controller;
 
+import com.dtidigital.simulador.dto.DroneStatusDTO;
 import com.dtidigital.simulador.model.Drone;
 import com.dtidigital.simulador.service.DroneService;
+import com.dtidigital.simulador.service.OperacaoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,7 @@ import java.util.List;
 public class DroneController {
 
     private final DroneService droneService;
+    private final OperacaoService operacaoService;
 
     @PostMapping
     public ResponseEntity<Drone> cadastrar(@RequestBody @Valid Drone drone){
@@ -27,6 +30,16 @@ public class DroneController {
     @GetMapping
     public ResponseEntity<List<Drone>> listarTodos(){
         return ResponseEntity.ok(droneService.listarTodos());
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<List<DroneStatusDTO>> status(){
+        return ResponseEntity.ok(operacaoService.listarStatusDosDrones());
+    }
+
+    @GetMapping("/{id}/status")
+    public ResponseEntity<DroneStatusDTO> statusPorId(@PathVariable String id){
+        return ResponseEntity.ok(operacaoService.obterStatusDoDrone(id));
     }
 
     @GetMapping("/disponiveis")

@@ -18,20 +18,11 @@ import java.util.Map;
 
 import static com.dtidigital.simulador.config.ParametrosSimulacao.*;
 
-/**
- * Conduz a máquina de estados dos drones ao longo do tempo simulado.
- *
- * Ciclo de uma viagem:
- * IDLE -> CARREGANDO -> EM_VOO -> ENTREGANDO -> (EM_VOO -> ENTREGANDO)* -> RETORNANDO -> IDLE
- *
- * O tempo não corre sozinho: ele avança em blocos, o que mantém a
- * simulação determinística e testável, sem threads nem sleeps.
- */
+
 @Service
 @RequiredArgsConstructor
 public class SimulacaoService {
 
-    /** Proteção contra etapas de duração zero em sequência. */
     private static final int MAX_TRANSICOES_POR_TICK = 1000;
 
     private final DroneRepository droneRepository;
@@ -166,9 +157,6 @@ public class SimulacaoService {
         return pedidoRepository.findByViagemIdOrderByOrdemNaRotaAsc(drone.getViagemAtualId());
     }
 
-    private double distancia(double x1, double y1, double x2, double y2) {
-        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-    }
 
     public Map<String, Object> estadoAtual() {
         List<Drone> drones = droneRepository.findAll();
@@ -202,10 +190,6 @@ public class SimulacaoService {
         return automaticaHabilitada;
     }
 
-    /**
-     * Modo automático: cada segundo de mundo real avança "minutosPorTick" na
-     * simulação. Desligado por padrão, para não interferir nos testes.
-     */
     @Scheduled(fixedDelayString = "${simulacao.automatica.intervalo-ms:1000}")
     public void tickAutomatico() {
         if (!automaticaHabilitada) {

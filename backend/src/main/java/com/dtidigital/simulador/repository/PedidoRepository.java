@@ -11,4 +11,6 @@ public interface PedidoRepository extends JpaRepository<Pedido, String> {
 
     List<Pedido> findByViagemIdOrderByOrdemNaRotaAsc(String viagemId);
 
+    List<Pedido> findByViagemIdIsNotNull();
+
 }

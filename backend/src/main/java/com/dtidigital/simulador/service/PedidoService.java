@@ -48,11 +48,9 @@ public class PedidoService {
         return calcularDistancia(BASE_X, BASE_Y, destinoX, destinoY);
     }
 
-    private double calcularDistancia(double x1, double y1, double x2, double y2) {
-        double deltaX = x2 - x1;
-        double deltaY = y2 - y1;
-        return Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
-    }
+ private double calcularDistancia(double x1, double y1, double x2, double y2) {
+    return distancia(x1, y1, x2, y2);
+}
 
     public void processarFila() {
 
