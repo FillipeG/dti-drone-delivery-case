@@ -1,6 +1,7 @@
 package com.dtidigital.simulador.service;
 
 import com.dtidigital.simulador.dto.DroneStatusDTO;
+import com.dtidigital.simulador.dto.FeedbackEntregaDTO;
 import com.dtidigital.simulador.dto.ParadaDTO;
 import com.dtidigital.simulador.dto.RotaViagemDTO;
 import com.dtidigital.simulador.exception.ResourceNotFoundException;
@@ -236,5 +237,80 @@ public class OperacaoService {
         total += distanciaDaBase(ultima.getCoordenadaX(), ultima.getCoordenadaY());
 
         return total;
+    }
+
+    // feedback ao cliente: "seu pacote está a X km de distância"
+    public FeedbackEntregaDTO obterFeedbackPedido(String pedidoId) {
+        Pedido pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado com o ID: " + pedidoId));
+
+        return switch (pedido.getStatus()) {
+            case ENTREGUE -> new FeedbackEntregaDTO(pedidoId, StatusPedido.ENTREGUE,
+                    "Seu pacote já foi entregue!", 0.0, 0.0);
+
+            case CANCELADO -> new FeedbackEntregaDTO(pedidoId, StatusPedido.CANCELADO,
+                    "Pedido cancelado.", null, null);
+
+            case PENDENTE -> new FeedbackEntregaDTO(pedidoId, StatusPedido.PENDENTE,
+                    pedido.getMotivoBloqueio() != null
+                            ? "Pedido aguardando: " + pedido.getMotivoBloqueio()
+                            : "Pedido na fila, aguardando alocação de um drone.",
+                    null, null);
+
+            case EM_TRANSPORTE -> montarFeedbackEmTransporte(pedido);
+        };
+    }
+
+    private FeedbackEntregaDTO montarFeedbackEmTransporte(Pedido pedido) {
+        Drone drone = pedido.getDroneAlocado();
+        if (drone == null || pedido.getViagemId() == null) {
+            return new FeedbackEntregaDTO(pedido.getId(), pedido.getStatus(),
+                    "Pedido em transporte, aguardando despacho.", null, null);
+        }
+
+        List<Pedido> rota = ordenarPelaRota(pedidoRepository.findByViagemIdOrderByOrdemNaRotaAsc(pedido.getViagemId()));
+        int indicePedido = rota.indexOf(pedido);
+        int paradaAtual = drone.getParadaAtual() == null ? 0 : drone.getParadaAtual();
+
+        double distanciaRestanteKm = distanciaRestanteAteParada(drone, rota, paradaAtual, indicePedido);
+        double tempoRestanteMinutos = arredondar(minutosParaPercorrer(distanciaRestanteKm));
+
+        String mensagem;
+        if (drone.getStatus() == StatusDrone.ENTREGANDO && paradaAtual == indicePedido) {
+            mensagem = "Seu pacote está sendo entregue agora!";
+        } else if (distanciaRestanteKm <= 0.0) {
+            mensagem = "Seu drone está chegando até você!";
+        } else {
+            mensagem = "Seu pacote está a " + arredondar(distanciaRestanteKm) + " km de distância.";
+        }
+
+        return new FeedbackEntregaDTO(pedido.getId(), pedido.getStatus(), mensagem,
+                arredondar(distanciaRestanteKm), tempoRestanteMinutos);
+    }
+
+    private double distanciaRestanteAteParada(Drone drone, List<Pedido> rota, int paradaAtual, int indicePedido) {
+        if (indicePedido < 0 || indicePedido < paradaAtual) {
+            return 0.0;
+        }
+
+        return switch (drone.getStatus()) {
+            case CARREGANDO -> somaTrechos(rota, 0, indicePedido);
+            case EM_VOO -> kmRestantesNaEtapa(drone) + somaTrechos(rota, paradaAtual + 1, indicePedido);
+            case ENTREGANDO -> indicePedido == paradaAtual ? 0.0 : somaTrechos(rota, paradaAtual + 1, indicePedido);
+            default -> 0.0;
+        };
+    }
+
+    private double somaTrechos(List<Pedido> rota, int inicio, int fim) {
+        double total = 0.0;
+        for (int i = Math.max(inicio, 0); i <= fim; i++) {
+            total += distanciaDoTrecho(rota, i);
+        }
+        return total;
+    }
+
+    private double kmRestantesNaEtapa(Drone drone) {
+        double minutos = drone.getTempoRestanteEtapaMinutos() == null ? 0.0 : drone.getTempoRestanteEtapaMinutos();
+        return minutos / 60.0 * VELOCIDADE_KM_H;
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.dtidigital.simulador.config.ParametrosSimulacao.*;
 
@@ -296,7 +297,60 @@ public class PedidoService {
         dashboard.put("tempoMedioMinutos", ParametrosSimulacao.arredondar(tempoMedioMinutos));
         dashboard.put("totalDrones", todosDrones.size());
         dashboard.put("totalViagens", totalViagens);
+        dashboard.put("droneMaisEficiente", determinarDroneMaisEficiente(todosPedidos));
+        dashboard.put("mapaEntregas", construirMapaAscii(todosPedidos));
 
         return dashboard;
+    }
+
+    private String determinarDroneMaisEficiente(List<Pedido> pedidos) {
+        Map<String, Long> entregasPorDrone = pedidos.stream()
+                .filter(p -> p.getStatus() == StatusPedido.ENTREGUE && p.getDroneAlocado() != null)
+                .collect(Collectors.groupingBy(p -> p.getDroneAlocado().getId(), Collectors.counting()));
+
+        return entregasPorDrone.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(null);
+    }
+
+    private String construirMapaAscii(List<Pedido> pedidos) {
+        int tamanho = 21;
+        int centro = tamanho / 2;
+
+        double maiorCoordenada = pedidos.stream()
+                .flatMap(p -> Stream.of(Math.abs(p.getCoordenadaX()), Math.abs(p.getCoordenadaY())))
+                .max(Double::compareTo)
+                .orElse(1.0);
+        double escala = maiorCoordenada == 0.0 ? 1.0 : (centro - 1) / maiorCoordenada;
+
+        char[][] grade = new char[tamanho][tamanho];
+        for (char[] linha : grade) {
+            Arrays.fill(linha, '.');
+        }
+        grade[centro][centro] = 'B';
+
+        for (Pedido pedido : pedidos) {
+            int coluna = centro + (int) Math.round(pedido.getCoordenadaX() * escala);
+            int linha = centro - (int) Math.round(pedido.getCoordenadaY() * escala);
+            if (linha < 0 || linha >= tamanho || coluna < 0 || coluna >= tamanho) {
+                continue;
+            }
+
+            char marcador = switch (pedido.getStatus()) {
+                case ENTREGUE -> 'E';
+                case EM_TRANSPORTE -> 'T';
+                case CANCELADO -> 'X';
+                default -> 'P';
+            };
+            grade[linha][coluna] = marcador;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("Legenda: B=base  P=pendente  T=em transporte  E=entregue  X=cancelado\n");
+        for (char[] linha : grade) {
+            sb.append(new String(linha)).append('\n');
+        }
+        return sb.toString();
     }
 }

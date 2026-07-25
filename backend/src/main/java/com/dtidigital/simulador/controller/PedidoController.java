@@ -1,7 +1,9 @@
 package com.dtidigital.simulador.controller;
 
+import com.dtidigital.simulador.dto.FeedbackEntregaDTO;
 import com.dtidigital.simulador.dto.PedidoDTO;
 import com.dtidigital.simulador.model.Pedido;
+import com.dtidigital.simulador.service.OperacaoService;
 import com.dtidigital.simulador.service.PedidoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import java.util.List;
 public class PedidoController {
 
     private final PedidoService pedidoService;
+    private final OperacaoService operacaoService;
 
     @PostMapping
     public ResponseEntity<Pedido> criarPedido(@RequestBody @Valid PedidoDTO dto){
@@ -47,5 +50,10 @@ public class PedidoController {
     public ResponseEntity<Map<String, Object>> obterDashboard() {
         return ResponseEntity.ok(pedidoService.obterDashboard());
     }
-    
+
+    @GetMapping("/{id}/rastreio")
+    public ResponseEntity<FeedbackEntregaDTO> rastrearPedido(@PathVariable String id) {
+        return ResponseEntity.ok(operacaoService.obterFeedbackPedido(id));
+    }
+
 }
