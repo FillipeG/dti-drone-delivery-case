@@ -23,6 +23,8 @@ public class PedidoService {
     private final ZonaExclusaoService zonaExclusaoService;
 
     public Pedido criarPedido(PedidoDTO dto) {
+        validarCapacidadeCompativel(dto.getPeso());
+
         Pedido pedido = new Pedido();
         pedido.setCoordenadaX(dto.getCoordenadaX());
         pedido.setCoordenadaY(dto.getCoordenadaY());
@@ -38,6 +40,24 @@ public class PedidoService {
         processarFila();
 
         return pedidoRepository.findById(pedidoSalvo.getId()).orElse(pedidoSalvo);
+    }
+
+    private void validarCapacidadeCompativel(double peso) {
+        List<Drone> drones = droneRepository.findAll();
+        if (drones.isEmpty()) {
+            return;
+        }
+
+        double maiorCapacidade = drones.stream()
+                .mapToDouble(Drone::getCapacidadeMaximaPeso)
+                .max()
+                .orElse(0.0);
+
+        if (peso > maiorCapacidade) {
+            throw new IllegalArgumentException(
+                    "Pacote de " + peso + " kg excede a capacidade máxima de todos os drones cadastrados ("
+                            + maiorCapacidade + " kg)");
+        }
     }
 
     public List<Pedido> listarTodos() {
@@ -235,11 +255,13 @@ public class PedidoService {
         }
     }
 
+    // drone com recarga automática: ao voltar pra base, já reabastece a bateria
     public void encerrarViagem(Drone drone) {
         drone.setStatus(StatusDrone.IDLE);
         drone.setViagemAtualId(null);
         drone.setParadaAtual(null);
         drone.setTempoRestanteEtapaMinutos(0.0);
+        drone.setBateriaAtual(drone.getAutonomiaMaximaKm());
     }
 
     // dashboard
