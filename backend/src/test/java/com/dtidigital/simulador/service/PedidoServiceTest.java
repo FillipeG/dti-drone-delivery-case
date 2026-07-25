@@ -1,0 +1,194 @@
+package com.dtidigital.simulador.service;
+
+import com.dtidigital.simulador.exception.ResourceNotFoundException;
+import com.dtidigital.simulador.model.*;
+import com.dtidigital.simulador.repository.DroneRepository;
+import com.dtidigital.simulador.repository.PedidoRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class PedidoServiceTest {
+
+    @Mock
+    private PedidoRepository pedidoRepository;
+
+    @Mock
+    private DroneRepository droneRepository;
+
+    @Mock
+    private ZonaExclusaoService zonaExclusaoService;
+
+    @InjectMocks
+    private PedidoService pedidoService;
+
+    private Drone criarDrone(String id, double capacidade, double autonomia, double bateria) {
+        Drone drone = new Drone();
+        drone.setId(id);
+        drone.setCapacidadeMaximaPeso(capacidade);
+        drone.setAutonomiaMaximaKm(autonomia);
+        drone.setBateriaAtual(bateria);
+        drone.setStatus(StatusDrone.IDLE);
+        return drone;
+    }
+
+    private Pedido criarPedidoPendente(String id, double x, double y, double peso, Prioridade prioridade) {
+        Pedido pedido = new Pedido();
+        pedido.setId(id);
+        pedido.setCoordenadaX(x);
+        pedido.setCoordenadaY(y);
+        pedido.setPeso(peso);
+        pedido.setPrioridade(prioridade);
+        pedido.setStatus(StatusPedido.PENDENTE);
+        return pedido;
+    }
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(pedidoRepository.save(any(Pedido.class))).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(droneRepository.save(any(Drone.class))).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(zonaExclusaoService.verificarBloqueio(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .thenReturn(Optional.empty());
+    }
+
+    @Test
+    void deveCalcularDistanciaEuclidianaDaBase() {
+        double distancia = pedidoService.calcularDistanciaDaBase(3.0, 4.0);
+        assertThat(distancia).isEqualTo(5.0);
+    }
+
+    @Test
+    void deveAlocarDroneCompativelParaPedidoPendente() {
+        Pedido pedido = criarPedidoPendente("p1", 3.0, 4.0, 2.0, Prioridade.MEDIA);
+        Drone drone = criarDrone("d1", 5.0, 20.0, 20.0);
+
+        when(pedidoRepository.findAll()).thenReturn(List.of(pedido));
+        when(droneRepository.findByStatus(StatusDrone.IDLE)).thenReturn(List.of(drone));
+
+        pedidoService.processarFila();
+
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.EM_TRANSPORTE);
+        assertThat(pedido.getDroneAlocado()).isEqualTo(drone);
+        assertThat(pedido.getMotivoBloqueio()).isNull();
+        assertThat(drone.getStatus()).isEqualTo(StatusDrone.EM_VOO);
+        // distancia (3,4) = 5km, ida e volta = 10km, bateria deve cair de 20 para 10
+        assertThat(drone.getBateriaAtual()).isEqualTo(10.0);
+    }
+
+    @Test
+    void naoDeveAlocarDroneQuandoPesoExcedeCapacidade() {
+        Pedido pedido = criarPedidoPendente("p1", 1.0, 0.0, 8.0, Prioridade.ALTA);
+        Drone drone = criarDrone("d1", 5.0, 20.0, 20.0);
+
+        when(pedidoRepository.findAll()).thenReturn(List.of(pedido));
+        when(droneRepository.findByStatus(StatusDrone.IDLE)).thenReturn(List.of(drone));
+
+        pedidoService.processarFila();
+
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.PENDENTE);
+        assertThat(pedido.getDroneAlocado()).isNull();
+    }
+
+    @Test
+    void naoDeveAlocarDroneQuandoBateriaInsuficiente() {
+        Pedido pedido = criarPedidoPendente("p1", 50.0, 0.0, 2.0, Prioridade.ALTA);
+        Drone drone = criarDrone("d1", 5.0, 20.0, 20.0); // ida+volta = 100km > 20km de autonomia
+
+        when(pedidoRepository.findAll()).thenReturn(List.of(pedido));
+        when(droneRepository.findByStatus(StatusDrone.IDLE)).thenReturn(List.of(drone));
+
+        pedidoService.processarFila();
+
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.PENDENTE);
+        assertThat(pedido.getDroneAlocado()).isNull();
+    }
+
+    @Test
+    void deveDarPrioridadeParaEntregaDeMaiorPrioridadeQuandoHaUmSoDrone() {
+        Pedido pedidoBaixa = criarPedidoPendente("p1", 1.0, 0.0, 1.0, Prioridade.BAIXA);
+        Pedido pedidoAlta = criarPedidoPendente("p2", 2.0, 0.0, 1.0, Prioridade.ALTA);
+        Drone drone = criarDrone("d1", 5.0, 20.0, 20.0);
+
+        when(pedidoRepository.findAll()).thenReturn(List.of(pedidoBaixa, pedidoAlta));
+        when(droneRepository.findByStatus(StatusDrone.IDLE))
+                .thenReturn(new ArrayList<>(List.of(drone)))
+                .thenReturn(Collections.emptyList());
+
+        pedidoService.processarFila();
+
+        assertThat(pedidoAlta.getStatus()).isEqualTo(StatusPedido.EM_TRANSPORTE);
+        assertThat(pedidoBaixa.getStatus()).isEqualTo(StatusPedido.PENDENTE);
+    }
+
+    @Test
+    void deveBloquearPedidoCujaRotaCruzaZonaDeExclusao() {
+        Pedido pedido = criarPedidoPendente("p1", 6.0, 6.0, 2.0, Prioridade.ALTA);
+        ZonaExclusao zona = new ZonaExclusao("z1", "Aeroporto", 5.0, 5.0, 3.0);
+
+        when(pedidoRepository.findAll()).thenReturn(List.of(pedido));
+        when(zonaExclusaoService.verificarBloqueio(0.0, 0.0, 6.0, 6.0)).thenReturn(Optional.of(zona));
+
+        pedidoService.processarFila();
+
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.PENDENTE);
+        assertThat(pedido.getMotivoBloqueio()).contains("Aeroporto");
+        assertThat(pedido.getDroneAlocado()).isNull();
+        verify(droneRepository, never()).findByStatus(any());
+    }
+
+    @Test
+    void deveLiberarDroneEMarcarPedidoComoEntregueAoConcluir() {
+        Drone drone = criarDrone("d1", 5.0, 20.0, 10.0);
+        drone.setStatus(StatusDrone.ENTREGANDO);
+
+        Pedido pedido = criarPedidoPendente("p1", 3.0, 4.0, 2.0, Prioridade.MEDIA);
+        pedido.setStatus(StatusPedido.EM_TRANSPORTE);
+        pedido.setDroneAlocado(drone);
+
+        when(pedidoRepository.findById("p1")).thenReturn(Optional.of(pedido));
+        when(pedidoRepository.findAll()).thenReturn(Collections.emptyList());
+
+        Pedido concluido = pedidoService.concluirEntrega("p1");
+
+        assertThat(concluido.getStatus()).isEqualTo(StatusPedido.ENTREGUE);
+        assertThat(drone.getStatus()).isEqualTo(StatusDrone.IDLE);
+    }
+
+    @Test
+    void deveLancarExcecaoAoConcluirPedidoInexistente() {
+        when(pedidoRepository.findById("id-invalido")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> pedidoService.concluirEntrega("id-invalido"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void deveCalcularDashboardCorretamente() {
+        Pedido entregue = criarPedidoPendente("p1", 3.0, 4.0, 1.0, Prioridade.ALTA);
+        entregue.setStatus(StatusPedido.ENTREGUE);
+        entregue.setTempoEstimadoMinutos(20.0);
+
+        Pedido pendente = criarPedidoPendente("p2", 1.0, 1.0, 1.0, Prioridade.BAIXA);
+
+        when(pedidoRepository.findAll()).thenReturn(List.of(entregue, pendente));
+        when(droneRepository.findAll()).thenReturn(List.of(criarDrone("d1", 5.0, 20.0, 20.0)));
+
+        Map<String, Object> dashboard = pedidoService.obterDashboard();
+
+        assertThat(dashboard.get("totalPedidos")).isEqualTo(2);
+        assertThat(dashboard.get("entregasRealizadas")).isEqualTo(1L);
+        assertThat(dashboard.get("pedidosNaFila")).isEqualTo(1L);
+        assertThat(dashboard.get("tempoMedioMinutos")).isEqualTo(20.0);
+        assertThat(dashboard.get("totalDrones")).isEqualTo(1);
+    }
+}
