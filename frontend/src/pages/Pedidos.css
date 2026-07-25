@@ -1,0 +1,82 @@
+.pedidos-form-card {
+  margin: 16px 0 20px;
+}
+
+.pedidos-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pedidos-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.pedidos-form__field input,
+.pedidos-form__field select {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 14px;
+  width: 140px;
+  font-family: inherit;
+}
+
+.pedidos-form__erro {
+  color: var(--color-danger-text);
+  font-size: 13px;
+  margin: 12px 0 0;
+}
+
+.pedidos-rastreio-card {
+  margin-bottom: 20px;
+  border-color: var(--dti-cyan);
+}
+
+.pedidos-rastreio__mensagem {
+  margin: 0;
+  font-weight: 600;
+  color: var(--dti-navy);
+}
+
+.pedidos-rastreio__detalhe {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.pedidos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.pedidos-table th {
+  text-align: left;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  padding: 0 8px 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pedidos-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.pedidos-table tr:last-child td {
+  border-bottom: none;
+}
+
+.pedidos-table__acoes {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

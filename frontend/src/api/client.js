@@ -12,11 +12,8 @@ async function request(path, options = {}) {
     throw new Error(mensagemDosCampos || corpo?.mensagem || `Erro ${response.status} ao chamar ${path}`)
   }
 
-  if (response.status === 204) {
-    return null
-  }
-
-  return response.json()
+  const texto = await response.text()
+  return texto ? JSON.parse(texto) : null
 }
 
 export function get(path) {
