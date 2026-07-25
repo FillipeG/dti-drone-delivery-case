@@ -58,8 +58,10 @@ public class PedidoService {
                 .filter(p -> p.getStatus() == StatusPedido.PENDENTE)
                 .collect(Collectors.toList());
 
+        // fila por prioridade e, em caso de empate, por ordem de chegada (FIFO)
         pedidosPendentes.sort(
                 Comparator.comparing(Pedido::getPrioridade).reversed()
+                        .thenComparing(Pedido::getCriadoEm)
                         .thenComparing(p -> calcularDistanciaDaBase(p.getCoordenadaX(), p.getCoordenadaY()))
         );
 
@@ -201,7 +203,7 @@ public class PedidoService {
         }
     }
 
-    // conclusão manual 
+    // conclusão manual
     public Pedido concluirEntrega(String pedidoId) {
         Pedido pedido = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado com o ID: " + pedidoId));

@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
+
 @Entity
 @Data
 @NoArgsConstructor
@@ -48,5 +50,8 @@ public class Pedido {
     private Double distanciaRotaKm;
 
     private Integer ordemNaRota;
+
+    // usado para ordenar a fila por tempo de chegada quando a prioridade empata
+    private Instant criadoEm = Instant.now();
 
 }
