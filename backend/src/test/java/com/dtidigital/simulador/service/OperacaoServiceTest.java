@@ -1,6 +1,7 @@
 package com.dtidigital.simulador.service;
 
 import com.dtidigital.simulador.dto.DroneStatusDTO;
+import com.dtidigital.simulador.dto.FeedbackEntregaDTO;
 import com.dtidigital.simulador.dto.RotaViagemDTO;
 import com.dtidigital.simulador.exception.ResourceNotFoundException;
 import com.dtidigital.simulador.model.*;
@@ -199,6 +200,111 @@ class OperacaoServiceTest {
         when(droneRepository.findById("nao-existe")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> operacaoService.obterStatusDoDrone("nao-existe"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+
+    @Test
+    void deveInformarQuePacoteJaFoiEntregue() {
+        Pedido pedido = criarPedido("p1", 3.0, 4.0, 2.0, 0, StatusPedido.ENTREGUE);
+        when(pedidoRepository.findById("p1")).thenReturn(Optional.of(pedido));
+
+        FeedbackEntregaDTO feedback = operacaoService.obterFeedbackPedido("p1");
+
+        assertThat(feedback.status()).isEqualTo(StatusPedido.ENTREGUE);
+        assertThat(feedback.distanciaRestanteKm()).isEqualTo(0.0);
+        assertThat(feedback.mensagem()).containsIgnoringCase("entregue");
+    }
+
+    @Test
+    void deveInformarPedidoPendenteAguardandoAlocacao() {
+        Pedido pedido = new Pedido();
+        pedido.setId("p1");
+        pedido.setStatus(StatusPedido.PENDENTE);
+        when(pedidoRepository.findById("p1")).thenReturn(Optional.of(pedido));
+
+        FeedbackEntregaDTO feedback = operacaoService.obterFeedbackPedido("p1");
+
+        assertThat(feedback.mensagem()).containsIgnoringCase("aguardando");
+        assertThat(feedback.distanciaRestanteKm()).isNull();
+    }
+
+    @Test
+    void deveInformarMotivoDeBloqueioQuandoPedidoPendenteEstaBloqueado() {
+        Pedido pedido = new Pedido();
+        pedido.setId("p1");
+        pedido.setStatus(StatusPedido.PENDENTE);
+        pedido.setMotivoBloqueio("Rota bloqueada pela zona de exclusão: Aeroporto");
+        when(pedidoRepository.findById("p1")).thenReturn(Optional.of(pedido));
+
+        FeedbackEntregaDTO feedback = operacaoService.obterFeedbackPedido("p1");
+
+        assertThat(feedback.mensagem()).contains("Aeroporto");
+    }
+
+    @Test
+    void deveInformarPedidoCancelado() {
+        Pedido pedido = new Pedido();
+        pedido.setId("p1");
+        pedido.setStatus(StatusPedido.CANCELADO);
+        when(pedidoRepository.findById("p1")).thenReturn(Optional.of(pedido));
+
+        FeedbackEntregaDTO feedback = operacaoService.obterFeedbackPedido("p1");
+
+        assertThat(feedback.mensagem()).containsIgnoringCase("cancelado");
+    }
+
+    @Test
+    void deveCalcularDistanciaRestanteQuandoDroneAindaEstaCarregando() {
+        // drone parado na base, ainda carregando; pedido a 5 km (3-4-5) é a primeira parada
+        Pedido pedido = criarPedido("p1", 3.0, 4.0, 2.0, 0, StatusPedido.EM_TRANSPORTE);
+        drone.setStatus(StatusDrone.CARREGANDO);
+        drone.setParadaAtual(0);
+
+        when(pedidoRepository.findById("p1")).thenReturn(Optional.of(pedido));
+        when(pedidoRepository.findByViagemIdOrderByOrdemNaRotaAsc("v1")).thenReturn(List.of(pedido));
+
+        FeedbackEntregaDTO feedback = operacaoService.obterFeedbackPedido("p1");
+
+        assertThat(feedback.distanciaRestanteKm()).isEqualTo(5.0);
+        assertThat(feedback.mensagem()).contains("5.0 km");
+    }
+
+    @Test
+    void deveCalcularDistanciaRestanteQuandoDroneEstaEmVooRumoAoPedido() {
+        Pedido pedido = criarPedido("p1", 3.0, 4.0, 2.0, 0, StatusPedido.EM_TRANSPORTE);
+        drone.setStatus(StatusDrone.EM_VOO);
+        drone.setParadaAtual(0);
+        drone.setTempoRestanteEtapaMinutos(4.0); // 4 min a 30km/h = 2 km restantes
+
+        when(pedidoRepository.findById("p1")).thenReturn(Optional.of(pedido));
+        when(pedidoRepository.findByViagemIdOrderByOrdemNaRotaAsc("v1")).thenReturn(List.of(pedido));
+
+        FeedbackEntregaDTO feedback = operacaoService.obterFeedbackPedido("p1");
+
+        assertThat(feedback.distanciaRestanteKm()).isEqualTo(2.0);
+    }
+
+    @Test
+    void deveInformarQueEstaSendoEntregueAgora() {
+        Pedido pedido = criarPedido("p1", 3.0, 4.0, 2.0, 0, StatusPedido.EM_TRANSPORTE);
+        drone.setStatus(StatusDrone.ENTREGANDO);
+        drone.setParadaAtual(0);
+
+        when(pedidoRepository.findById("p1")).thenReturn(Optional.of(pedido));
+        when(pedidoRepository.findByViagemIdOrderByOrdemNaRotaAsc("v1")).thenReturn(List.of(pedido));
+
+        FeedbackEntregaDTO feedback = operacaoService.obterFeedbackPedido("p1");
+
+        assertThat(feedback.distanciaRestanteKm()).isEqualTo(0.0);
+        assertThat(feedback.mensagem()).containsIgnoringCase("entregue agora");
+    }
+
+    @Test
+    void deveLancarExcecaoAoRastrearPedidoInexistente() {
+        when(pedidoRepository.findById("nao-existe")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> operacaoService.obterFeedbackPedido("nao-existe"))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 }

@@ -12,8 +12,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -106,6 +109,48 @@ class PedidoServiceTest {
 
 
     @Test
+    void deveRejeitarPedidoQuePesoExcedeCapacidadeDeTodosOsDrones() {
+        PedidoDTO dto = new PedidoDTO();
+        dto.setCoordenadaX(1.0);
+        dto.setCoordenadaY(1.0);
+        dto.setPeso(50.0);
+        dto.setPrioridade(Prioridade.ALTA);
+
+        when(droneRepository.findAll()).thenReturn(List.of(criarDrone("d1", 5.0, 20.0, 20.0)));
+
+        assertThatThrownBy(() -> pedidoService.criarPedido(dto))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("excede a capacidade");
+
+        verify(pedidoRepository, never()).save(any(Pedido.class));
+    }
+
+    @Test
+    void deveAceitarPedidoQuandoNaoHaDronesCadastradosAinda() {
+        PedidoDTO dto = new PedidoDTO();
+        dto.setCoordenadaX(1.0);
+        dto.setCoordenadaY(1.0);
+        dto.setPeso(999.0);
+        dto.setPrioridade(Prioridade.ALTA);
+
+        when(droneRepository.findAll()).thenReturn(List.of());
+        when(droneRepository.findByStatus(StatusDrone.IDLE)).thenReturn(List.of());
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(inv -> {
+            Pedido p = inv.getArgument(0);
+            if (p.getId() == null) {
+                p.setId("p1");
+            }
+            return p;
+        });
+        when(pedidoRepository.findAll()).thenReturn(List.of());
+        when(pedidoRepository.findById("p1")).thenReturn(Optional.empty());
+
+        Pedido resultado = pedidoService.criarPedido(dto);
+
+        assertThat(resultado.getStatus()).isEqualTo(StatusPedido.PENDENTE);
+    }
+
+    @Test
     void deveAlocarDroneCompativelParaPedidoPendente() {
         Pedido pedido = criarPedidoPendente("p1", 3.0, 4.0, 2.0, Prioridade.MEDIA);
         Drone drone = criarDrone("d1", 5.0, 20.0, 20.0);
@@ -142,7 +187,7 @@ class PedidoServiceTest {
     @Test
     void naoDeveAlocarDroneQuandoBateriaInsuficiente() {
         Pedido pedido = criarPedidoPendente("p1", 50.0, 0.0, 2.0, Prioridade.ALTA);
-        Drone drone = criarDrone("d1", 5.0, 20.0, 20.0); 
+        Drone drone = criarDrone("d1", 5.0, 20.0, 20.0);
 
         when(pedidoRepository.findAll()).thenReturn(List.of(pedido));
         when(droneRepository.findByStatus(StatusDrone.IDLE)).thenReturn(List.of(drone));
@@ -238,6 +283,26 @@ class PedidoServiceTest {
         assertThat(pedidoBaixa.getStatus()).isEqualTo(StatusPedido.PENDENTE);
     }
 
+    @Test
+    void deveDesempatarPorTempoDeChegadaQuandoPrioridadeEDistanciaSaoIguais() {
+        // mesma prioridade e mesma distância da base (3-4-5): só o mais antigo cabe no drone
+        Pedido chegouDepois = criarPedidoPendente("p1", 3.0, 4.0, 4.0, Prioridade.MEDIA);
+        chegouDepois.setCriadoEm(Instant.now());
+
+        Pedido chegouPrimeiro = criarPedidoPendente("p2", 4.0, 3.0, 4.0, Prioridade.MEDIA);
+        chegouPrimeiro.setCriadoEm(Instant.now().minus(1, ChronoUnit.MINUTES));
+
+        Drone drone = criarDrone("d1", 5.0, 20.0, 20.0);
+
+        when(pedidoRepository.findAll()).thenReturn(List.of(chegouDepois, chegouPrimeiro));
+        when(droneRepository.findByStatus(StatusDrone.IDLE)).thenReturn(List.of(drone));
+
+        pedidoService.processarFila();
+
+        assertThat(chegouPrimeiro.getStatus()).isEqualTo(StatusPedido.EM_TRANSPORTE);
+        assertThat(chegouDepois.getStatus()).isEqualTo(StatusPedido.PENDENTE);
+    }
+
 
     @Test
     void deveBloquearPedidoCujaRotaCruzaZonaDeExclusao() {
@@ -276,6 +341,22 @@ class PedidoServiceTest {
 
         assertThat(concluido.getStatus()).isEqualTo(StatusPedido.ENTREGUE);
         assertThat(drone.getStatus()).isEqualTo(StatusDrone.IDLE);
+        assertThat(drone.getBateriaAtual()).isEqualTo(drone.getAutonomiaMaximaKm());
+    }
+
+    @Test
+    void deveRecarregarBateriaAutomaticamenteAoEncerrarViagem() {
+        Drone drone = criarDrone("d1", 5.0, 20.0, 3.5);
+        drone.setStatus(StatusDrone.RETORNANDO);
+        drone.setViagemAtualId("v1");
+        drone.setParadaAtual(2);
+
+        pedidoService.encerrarViagem(drone);
+
+        assertThat(drone.getStatus()).isEqualTo(StatusDrone.IDLE);
+        assertThat(drone.getViagemAtualId()).isNull();
+        assertThat(drone.getParadaAtual()).isNull();
+        assertThat(drone.getBateriaAtual()).isEqualTo(20.0);
     }
 
     @Test
@@ -314,15 +395,18 @@ class PedidoServiceTest {
 
     @Test
     void deveCalcularDashboardCorretamente() {
+        Drone drone = criarDrone("d1", 5.0, 20.0, 20.0);
+
         Pedido entregue = criarPedidoPendente("p1", 3.0, 4.0, 1.0, Prioridade.ALTA);
         entregue.setStatus(StatusPedido.ENTREGUE);
         entregue.setTempoEstimadoMinutos(20.0);
         entregue.setViagemId("v1");
+        entregue.setDroneAlocado(drone);
 
         Pedido pendente = criarPedidoPendente("p2", 1.0, 1.0, 1.0, Prioridade.BAIXA);
 
         when(pedidoRepository.findAll()).thenReturn(List.of(entregue, pendente));
-        when(droneRepository.findAll()).thenReturn(List.of(criarDrone("d1", 5.0, 20.0, 20.0)));
+        when(droneRepository.findAll()).thenReturn(List.of(drone));
 
         Map<String, Object> dashboard = pedidoService.obterDashboard();
 
@@ -332,5 +416,48 @@ class PedidoServiceTest {
         assertThat(dashboard.get("tempoMedioMinutos")).isEqualTo(20.0);
         assertThat(dashboard.get("totalDrones")).isEqualTo(1);
         assertThat(dashboard.get("totalViagens")).isEqualTo(1L);
+        assertThat(dashboard.get("droneMaisEficiente")).isEqualTo("d1");
+        assertThat((String) dashboard.get("mapaEntregas")).contains("B").contains("Legenda");
+    }
+
+    @Test
+    void deveProcessarGrandeVolumeDePedidosSemErrosRespeitandoRegras() {
+        int quantidadeDrones = 50;
+        int quantidadePedidos = 300;
+        double capacidadePorDrone = 5.0;
+        double pesoPorPedido = 1.0;
+
+        List<Drone> drones = new ArrayList<>();
+        for (int i = 0; i < quantidadeDrones; i++) {
+            drones.add(criarDrone("d" + i, capacidadePorDrone, 100.0, 100.0));
+        }
+
+        List<Pedido> pedidos = new ArrayList<>();
+        Prioridade[] prioridades = Prioridade.values();
+        for (int i = 0; i < quantidadePedidos; i++) {
+            double x = (i % 20) - 10;
+            double y = ((i / 20) % 20) - 10;
+            Pedido pedido = criarPedidoPendente("p" + i, x, y, pesoPorPedido, prioridades[i % prioridades.length]);
+            pedidos.add(pedido);
+        }
+
+        when(pedidoRepository.findAll()).thenReturn(pedidos);
+        when(droneRepository.findByStatus(StatusDrone.IDLE)).thenReturn(drones);
+
+        long inicio = System.nanoTime();
+        pedidoService.processarFila();
+        long duracaoMs = (System.nanoTime() - inicio) / 1_000_000;
+
+        long alocados = pedidos.stream().filter(p -> p.getStatus() == StatusPedido.EM_TRANSPORTE).count();
+        long pendentes = pedidos.stream().filter(p -> p.getStatus() == StatusPedido.PENDENTE).count();
+
+        assertThat(alocados + pendentes).isEqualTo(quantidadePedidos);
+        assertThat(alocados).isEqualTo((long) (quantidadeDrones * capacidadePorDrone / pesoPorPedido));
+        assertThat(duracaoMs).isLessThan(5_000);
+
+        Map<String, Long> pesoPorViagem = pedidos.stream()
+                .filter(p -> p.getViagemId() != null)
+                .collect(Collectors.groupingBy(Pedido::getViagemId, Collectors.summingLong(p -> (long) p.getPeso().doubleValue())));
+        assertThat(pesoPorViagem.values()).allMatch(peso -> peso <= capacidadePorDrone);
     }
 }
