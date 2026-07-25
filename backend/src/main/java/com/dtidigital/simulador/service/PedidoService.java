@@ -1,6 +1,7 @@
 package com.dtidigital.simulador.service;
 
 import com.dtidigital.simulador.dto.PedidoDTO;
+import com.dtidigital.simulador.exception.ResourceNotFoundException;
 import com.dtidigital.simulador.model.*;
 import com.dtidigital.simulador.repository.DroneRepository;
 import com.dtidigital.simulador.repository.PedidoRepository;
@@ -61,7 +62,6 @@ public class PedidoService {
 
         for (Pedido pedido : pedidosPendentes) {
 
-            // verifica se a rota até o pedido cruza alguma zona de exclusão aérea
             Optional<ZonaExclusao> zonaBloqueando = zonaExclusaoService.verificarBloqueio(
                     BASE_X, BASE_Y, pedido.getCoordenadaX(), pedido.getCoordenadaY());
 
@@ -85,7 +85,6 @@ public class PedidoService {
             if (melhorDrone.isPresent()) {
                 Drone drone = melhorDrone.get();
 
-                // calcula tempo estimado
                 double tempoHoras = distanciaIdaEVolta / VELOCIDADE_DRONE_KM_H;
                 double tempoMinutos = Math.round(tempoHoras * 60 * 100.0) / 100.0;
 
@@ -105,7 +104,7 @@ public class PedidoService {
     // concluir entrega
     public Pedido concluirEntrega(String pedidoId) {
         Pedido pedido = pedidoRepository.findById(pedidoId)
-                .orElseThrow(() -> new RuntimeException("Pedido não encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado com o ID: " + pedidoId));
 
         if (pedido.getDroneAlocado() != null) {
             Drone drone = pedido.getDroneAlocado();

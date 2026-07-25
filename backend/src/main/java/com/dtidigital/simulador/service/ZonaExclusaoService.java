@@ -1,6 +1,7 @@
 package com.dtidigital.simulador.service;
 
 import com.dtidigital.simulador.dto.ZonaExclusaoDTO;
+import com.dtidigital.simulador.exception.ResourceNotFoundException;
 import com.dtidigital.simulador.model.ZonaExclusao;
 import com.dtidigital.simulador.repository.ZonaExclusaoRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,16 +31,11 @@ public class ZonaExclusaoService {
 
     public void removerZona(String id) {
         if (!zonaExclusaoRepository.existsById(id)) {
-            throw new RuntimeException("Zona de exclusão não encontrada com o ID: " + id);
+            throw new ResourceNotFoundException("Zona de exclusão não encontrada com o ID: " + id);
         }
         zonaExclusaoRepository.deleteById(id);
     }
 
-    /**
-     * Verifica se o trajeto em linha reta entre a origem (base) e o destino (pedido)
-     * cruza alguma zona de exclusão aérea cadastrada.
-     * Retorna a primeira zona encontrada que bloqueia a rota, se houver.
-     */
     public Optional<ZonaExclusao> verificarBloqueio(double origemX, double origemY,
                                                       double destinoX, double destinoY) {
         return zonaExclusaoRepository.findAll().stream()
@@ -49,10 +45,6 @@ public class ZonaExclusaoService {
                 .findFirst();
     }
 
-    /**
-     * Calcula se o segmento de reta A-B passa a uma distância menor ou igual
-     * ao raio do centro de um círculo C (projeção do ponto no segmento).
-     */
     private boolean segmentoIntersectaCirculo(double ax, double ay, double bx, double by,
                                                 double cx, double cy, double raio) {
         double abX = bx - ax;

@@ -1,5 +1,6 @@
 package com.dtidigital.simulador.service;
 
+import com.dtidigital.simulador.exception.ResourceNotFoundException;
 import com.dtidigital.simulador.model.Drone;
 import com.dtidigital.simulador.model.StatusDrone;
 import com.dtidigital.simulador.repository.DroneRepository;
@@ -45,19 +46,20 @@ public class DroneService {
     }
 
     public Drone atualizarStatus(String id, StatusDrone novoStatus){
-        
-        Drone drone = droneRepository.findById(id).orElseThrow(() -> new RuntimeException("Drone não encontrado com o ID: " + id));
+
+        Drone drone = droneRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Drone não encontrado com o ID: " + id));
         drone.setStatus(novoStatus);
         return droneRepository.save(drone);
     }
 
     public Drone recarregarBateria(String id) {
         Drone drone = droneRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Drone não encontrado"));
-        
+                .orElseThrow(() -> new ResourceNotFoundException("Drone não encontrado com o ID: " + id));
+
         drone.setBateriaAtual(drone.getAutonomiaMaximaKm());
         drone.setStatus(StatusDrone.IDLE);
         return droneRepository.save(drone);
     }
-    
+
 }

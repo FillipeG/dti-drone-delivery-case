@@ -2,6 +2,7 @@ package com.dtidigital.simulador.controller;
 
 import com.dtidigital.simulador.model.Drone;
 import com.dtidigital.simulador.service.DroneService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +19,7 @@ public class DroneController {
     private final DroneService droneService;
 
     @PostMapping
-    public ResponseEntity<Drone> cadastrar(@RequestBody Drone drone){
+    public ResponseEntity<Drone> cadastrar(@RequestBody @Valid Drone drone){
         Drone novoDrone = droneService.cadastrarDrone(drone);
         return ResponseEntity.status(HttpStatus.CREATED).body(novoDrone);
     }
@@ -42,5 +43,5 @@ public class DroneController {
     public ResponseEntity<Drone> recarregar(@PathVariable String id) {
         return ResponseEntity.ok(droneService.recarregarBateria(id));
     }
-    
+
 }
