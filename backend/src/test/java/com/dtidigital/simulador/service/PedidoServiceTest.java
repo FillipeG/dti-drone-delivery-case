@@ -303,6 +303,59 @@ class PedidoServiceTest {
         assertThat(chegouDepois.getStatus()).isEqualTo(StatusPedido.PENDENTE);
     }
 
+    @Test
+    void deveEscolherCombinacaoQueMaisAproveitaACapacidadeDoDroneEmVezDoPrimeiroQueCouber() {
+        // capacidade 10: p1(7) sozinho deixaria 3kg sem usar; p2(6)+p3(4) enche o drone
+        Pedido p1 = criarPedidoPendente("p1", 1.0, 0.0, 7.0, Prioridade.MEDIA);
+        Pedido p2 = criarPedidoPendente("p2", 2.0, 0.0, 6.0, Prioridade.MEDIA);
+        Pedido p3 = criarPedidoPendente("p3", 3.0, 0.0, 4.0, Prioridade.MEDIA);
+        Drone drone = criarDrone("d1", 10.0, 50.0, 50.0);
+
+        when(pedidoRepository.findAll()).thenReturn(List.of(p1, p2, p3));
+        when(droneRepository.findByStatus(StatusDrone.IDLE)).thenReturn(List.of(drone));
+
+        pedidoService.processarFila();
+
+        assertThat(p2.getStatus()).isEqualTo(StatusPedido.EM_TRANSPORTE);
+        assertThat(p3.getStatus()).isEqualTo(StatusPedido.EM_TRANSPORTE);
+        assertThat(p1.getStatus()).isEqualTo(StatusPedido.PENDENTE);
+    }
+
+    @Test
+    void deveRespeitarPrioridadeMesmoQuandoOutraCombinacaoAproveitariaMaisPesoDoDrone() {
+        // p2+p3 (MEDIA) encheriam o drone (10kg), mas o pedido ALTA tem que ser
+        // atendido primeiro, mesmo deixando capacidade ociosa
+        Pedido pedidoAlta = criarPedidoPendente("p1", 1.0, 0.0, 7.0, Prioridade.ALTA);
+        Pedido p2 = criarPedidoPendente("p2", 2.0, 0.0, 6.0, Prioridade.MEDIA);
+        Pedido p3 = criarPedidoPendente("p3", 3.0, 0.0, 4.0, Prioridade.MEDIA);
+        Drone drone = criarDrone("d1", 10.0, 50.0, 50.0);
+
+        when(pedidoRepository.findAll()).thenReturn(List.of(pedidoAlta, p2, p3));
+        when(droneRepository.findByStatus(StatusDrone.IDLE)).thenReturn(List.of(drone));
+
+        pedidoService.processarFila();
+
+        assertThat(pedidoAlta.getStatus()).isEqualTo(StatusPedido.EM_TRANSPORTE);
+        assertThat(p2.getStatus()).isEqualTo(StatusPedido.PENDENTE);
+        assertThat(p3.getStatus()).isEqualTo(StatusPedido.PENDENTE);
+    }
+
+    @Test
+    void deveRemoverPedidoDeMenorPrioridadeAoAjustarACombinacaoPelaAutonomia() {
+        // combinado, base->(0,1)->(9,0)->base = ~19,05 km; so o ALTA sozinho = 18 km
+        Pedido pedidoAlta = criarPedidoPendente("p1", 9.0, 0.0, 1.0, Prioridade.ALTA);
+        Pedido pedidoBaixa = criarPedidoPendente("p2", 0.0, 1.0, 1.0, Prioridade.BAIXA);
+        Drone drone = criarDrone("d1", 5.0, 20.0, 18.5);
+
+        when(pedidoRepository.findAll()).thenReturn(List.of(pedidoAlta, pedidoBaixa));
+        when(droneRepository.findByStatus(StatusDrone.IDLE)).thenReturn(List.of(drone));
+
+        pedidoService.processarFila();
+
+        assertThat(pedidoAlta.getStatus()).isEqualTo(StatusPedido.EM_TRANSPORTE);
+        assertThat(pedidoBaixa.getStatus()).isEqualTo(StatusPedido.PENDENTE);
+    }
+
 
     @Test
     void deveBloquearPedidoCujaRotaCruzaZonaDeExclusao() {

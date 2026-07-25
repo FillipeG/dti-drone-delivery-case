@@ -19,6 +19,14 @@ import static com.dtidigital.simulador.config.ParametrosSimulacao.*;
 @RequiredArgsConstructor
 public class PedidoService {
 
+    // ordem de prioridade decrescente: uma prioridade so pode consumir capacidade
+    // depois que a prioridade anterior ja escolheu sua melhor combinacao
+    private static final List<Prioridade> PRIORIDADES_DECRESCENTE =
+            List.of(Prioridade.ALTA, Prioridade.MEDIA, Prioridade.BAIXA);
+
+    // knapsack trabalha em centigramas (2 casas decimais) pra poder usar indices inteiros
+    private static final int ESCALA_PESO = 100;
+
     private final PedidoRepository pedidoRepository;
     private final DroneRepository droneRepository;
     private final ZonaExclusaoService zonaExclusaoService;
@@ -118,29 +126,109 @@ public class PedidoService {
         }
     }
 
+    // busca, por nivel de prioridade, a combinacao de pedidos que mais aproveita
+    // a capacidade do drone; a autonomia entra depois, cortando pedidos de menor
+    // prioridade caso a rota resultante nao caiba na bateria
     private List<Pedido> montarManifestoParaDrone(Drone drone, List<Pedido> candidatos) {
         List<Pedido> manifesto = new ArrayList<>();
-        double pesoAcumulado = 0.0;
+        double capacidadeRestante = drone.getCapacidadeMaximaPeso();
 
-        for (Pedido candidato : candidatos) {
-            double novoPeso = pesoAcumulado + candidato.getPeso();
-            if (novoPeso > drone.getCapacidadeMaximaPeso()) {
+        for (Prioridade prioridade : PRIORIDADES_DECRESCENTE) {
+            if (capacidadeRestante <= 0) {
+                break;
+            }
+
+            List<Pedido> candidatosDoNivel = candidatos.stream()
+                    .filter(p -> p.getPrioridade() == prioridade)
+                    .toList();
+
+            if (candidatosDoNivel.isEmpty()) {
                 continue;
             }
 
-            List<Pedido> tentativa = new ArrayList<>(manifesto);
-            tentativa.add(candidato);
-
-            double distanciaRota = calcularDistanciaRota(tentativa);
-            if (distanciaRota > drone.getBateriaAtual()) {
-                continue;
-            }
-
-            manifesto.add(candidato);
-            pesoAcumulado = novoPeso;
+            List<Pedido> selecionados = selecionarCombinacaoDeMaiorPeso(candidatosDoNivel, capacidadeRestante);
+            manifesto.addAll(selecionados);
+            capacidadeRestante -= selecionados.stream().mapToDouble(Pedido::getPeso).sum();
         }
 
-        return manifesto;
+        return respeitarAutonomia(drone, manifesto);
+    }
+
+    // knapsack 0/1: dentre os candidatos do mesmo nivel de prioridade (ja ordenados
+    // por tempo de chegada e distancia), escolhe o subconjunto que carrega o maior
+    // peso possivel sem estourar a capacidade disponivel
+    private List<Pedido> selecionarCombinacaoDeMaiorPeso(List<Pedido> candidatosDoNivel, double capacidadeDisponivel) {
+        int capacidade = (int) Math.round(capacidadeDisponivel * ESCALA_PESO);
+        if (capacidade <= 0) {
+            return List.of();
+        }
+
+        int n = candidatosDoNivel.size();
+        int[] pesos = new int[n];
+        for (int i = 0; i < n; i++) {
+            pesos[i] = (int) Math.round(candidatosDoNivel.get(i).getPeso() * ESCALA_PESO);
+        }
+
+        int[] dp = new int[capacidade + 1];
+        boolean[][] usado = new boolean[n][capacidade + 1];
+
+        for (int i = 0; i < n; i++) {
+            int peso = pesos[i];
+            if (peso <= 0 || peso > capacidade) {
+                continue;
+            }
+            for (int w = capacidade; w >= peso; w--) {
+                int valorComItem = dp[w - peso] + peso;
+                if (valorComItem > dp[w]) {
+                    dp[w] = valorComItem;
+                    usado[i][w] = true;
+                }
+            }
+        }
+
+        List<Pedido> selecionados = new ArrayList<>();
+        int w = capacidade;
+        for (int i = n - 1; i >= 0; i--) {
+            if (usado[i][w]) {
+                selecionados.add(candidatosDoNivel.get(i));
+                w -= pesos[i];
+            }
+        }
+
+        Collections.reverse(selecionados);
+        return selecionados;
+    }
+
+    // remove pedidos de menor prioridade ate a rota caber na autonomia do drone
+    private List<Pedido> respeitarAutonomia(Drone drone, List<Pedido> manifesto) {
+        List<Pedido> ajustado = new ArrayList<>(manifesto);
+
+        while (!ajustado.isEmpty() && calcularDistanciaRota(ajustado) > drone.getBateriaAtual()) {
+            ajustado.remove(escolherPedidoParaRemover(ajustado));
+        }
+
+        return ajustado;
+    }
+
+    private Pedido escolherPedidoParaRemover(List<Pedido> manifesto) {
+        Prioridade menorPrioridade = manifesto.stream()
+                .map(Pedido::getPrioridade)
+                .min(Comparator.naturalOrder())
+                .orElseThrow();
+
+        List<Pedido> candidatosRemocao = manifesto.stream()
+                .filter(p -> p.getPrioridade() == menorPrioridade)
+                .toList();
+
+        return candidatosRemocao.stream()
+                .max(Comparator.comparingDouble(p -> reducaoDeDistanciaAoRemover(manifesto, p)))
+                .orElseThrow();
+    }
+
+    private double reducaoDeDistanciaAoRemover(List<Pedido> manifesto, Pedido pedido) {
+        List<Pedido> semPedido = new ArrayList<>(manifesto);
+        semPedido.remove(pedido);
+        return calcularDistanciaRota(manifesto) - calcularDistanciaRota(semPedido);
     }
 
     public List<Pedido> ordenarRota(List<Pedido> pedidos) {
