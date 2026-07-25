@@ -16,6 +16,7 @@ import java.util.Optional;
 public class DroneService {
 
     private final DroneRepository droneRepository;
+    private final PedidoService pedidoService;
 
     public Drone cadastrarDrone(Drone drone){
 
@@ -26,7 +27,10 @@ public class DroneService {
         if (drone.getStatus() == null) {
             drone.setStatus(StatusDrone.IDLE);
         }
-        return droneRepository.save(drone);
+
+        Drone droneSalvo = droneRepository.save(drone);
+        pedidoService.processarFila();
+        return droneSalvo;
     }
 
     public List<Drone> listarTodos(){
@@ -59,7 +63,9 @@ public class DroneService {
 
         drone.setBateriaAtual(drone.getAutonomiaMaximaKm());
         drone.setStatus(StatusDrone.IDLE);
-        return droneRepository.save(drone);
+        Drone droneRecarregado = droneRepository.save(drone);
+        pedidoService.processarFila();
+        return droneRecarregado;
     }
 
 }

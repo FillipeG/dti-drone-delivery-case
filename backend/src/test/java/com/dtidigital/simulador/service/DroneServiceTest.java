@@ -24,6 +24,9 @@ class DroneServiceTest {
     @Mock
     private DroneRepository droneRepository;
 
+    @Mock
+    private PedidoService pedidoService;
+
     @InjectMocks
     private DroneService droneService;
 
@@ -45,6 +48,15 @@ class DroneServiceTest {
 
         assertThat(salvo.getBateriaAtual()).isEqualTo(20.0);
         assertThat(salvo.getStatus()).isEqualTo(StatusDrone.IDLE);
+    }
+
+    @Test
+    void deveReprocessarAFilaAoCadastrarDrone() {
+        when(droneRepository.save(any(Drone.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        droneService.cadastrarDrone(drone);
+
+        verify(pedidoService).processarFila();
     }
 
     @Test
@@ -115,6 +127,16 @@ class DroneServiceTest {
 
         assertThat(recarregado.getBateriaAtual()).isEqualTo(20.0);
         assertThat(recarregado.getStatus()).isEqualTo(StatusDrone.IDLE);
+    }
+
+    @Test
+    void deveReprocessarAFilaAoRecarregarBateria() {
+        when(droneRepository.findById("drone-1")).thenReturn(Optional.of(drone));
+        when(droneRepository.save(any(Drone.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        droneService.recarregarBateria("drone-1");
+
+        verify(pedidoService).processarFila();
     }
 
     @Test
