@@ -70,6 +70,7 @@ class PedidoServiceTest {
         assertThat(distancia).isEqualTo(5.0);
     }
 
+
     @Test
     void deveCriarPedidoJaAlocandoDroneDisponivel() {
         PedidoDTO dto = new PedidoDTO();
@@ -98,8 +99,7 @@ class PedidoServiceTest {
 
         assertThat(resultado.getStatus()).isEqualTo(StatusPedido.EM_TRANSPORTE);
         assertThat(resultado.getDroneAlocado()).isEqualTo(drone);
-        // ida + volta = 10 km a 30 km/h = 20 minutos
-        assertThat(resultado.getTempoEstimadoMinutos()).isEqualTo(20.0);
+        assertThat(resultado.getTempoEstimadoMinutos()).isEqualTo(27.0);
         assertThat(resultado.getDistanciaRotaKm()).isEqualTo(10.0);
         assertThat(resultado.getViagemId()).isNotNull();
     }
@@ -118,7 +118,9 @@ class PedidoServiceTest {
         assertThat(pedido.getStatus()).isEqualTo(StatusPedido.EM_TRANSPORTE);
         assertThat(pedido.getDroneAlocado()).isEqualTo(drone);
         assertThat(pedido.getMotivoBloqueio()).isNull();
-        assertThat(drone.getStatus()).isEqualTo(StatusDrone.EM_VOO);
+        assertThat(drone.getStatus()).isEqualTo(StatusDrone.CARREGANDO);
+        assertThat(drone.getViagemAtualId()).isEqualTo(pedido.getViagemId());
+        assertThat(drone.getTempoRestanteEtapaMinutos()).isEqualTo(5.0);
         assertThat(drone.getBateriaAtual()).isEqualTo(10.0);
     }
 
@@ -179,6 +181,8 @@ class PedidoServiceTest {
         assertThat(p1.getStatus()).isEqualTo(StatusPedido.EM_TRANSPORTE);
         assertThat(p2.getStatus()).isEqualTo(StatusPedido.EM_TRANSPORTE);
         assertThat(p1.getViagemId()).isNotNull().isEqualTo(p2.getViagemId());
+        assertThat(p1.getOrdemNaRota()).isEqualTo(0);
+        assertThat(p2.getOrdemNaRota()).isEqualTo(1);
         // rota base -> (1,0) -> (2,0) -> base = 4 km
         assertThat(drone.getBateriaAtual()).isEqualTo(16.0);
         assertThat(p1.getDistanciaRotaKm()).isEqualTo(4.0);
@@ -254,6 +258,7 @@ class PedidoServiceTest {
         assertThat(drone.getBateriaAtual()).isEqualTo(20.0);
     }
 
+
     @Test
     void deveLiberarDroneEMarcarPedidoComoEntregueAoConcluir() {
         Drone drone = criarDrone("d1", 5.0, 20.0, 10.0);
@@ -305,6 +310,7 @@ class PedidoServiceTest {
         assertThatThrownBy(() -> pedidoService.concluirEntrega("id-invalido"))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
+
 
     @Test
     void deveCalcularDashboardCorretamente() {

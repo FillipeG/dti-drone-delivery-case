@@ -1,5 +1,6 @@
 package com.dtidigital.simulador.service;
 
+import com.dtidigital.simulador.config.ParametrosSimulacao;
 import com.dtidigital.simulador.dto.PedidoDTO;
 import com.dtidigital.simulador.exception.ResourceNotFoundException;
 import com.dtidigital.simulador.model.*;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.dtidigital.simulador.config.ParametrosSimulacao.*;
+
 @Service
 @RequiredArgsConstructor
 public class PedidoService {
@@ -18,10 +21,6 @@ public class PedidoService {
     private final PedidoRepository pedidoRepository;
     private final DroneRepository droneRepository;
     private final ZonaExclusaoService zonaExclusaoService;
-
-    private static final double BASE_X = 0.0;
-    private static final double BASE_Y = 0.0;
-    private static final double VELOCIDADE_DRONE_KM_H = 30.0;
 
     public Pedido criarPedido(PedidoDTO dto) {
         Pedido pedido = new Pedido();
@@ -98,7 +97,6 @@ public class PedidoService {
         }
     }
 
-
     private List<Pedido> montarManifestoParaDrone(Drone drone, List<Pedido> candidatos) {
         List<Pedido> manifesto = new ArrayList<>();
         double pesoAcumulado = 0.0;
@@ -124,15 +122,12 @@ public class PedidoService {
         return manifesto;
     }
 
-    private double calcularDistanciaRota(List<Pedido> pedidos) {
-        if (pedidos.isEmpty()) {
-            return 0.0;
-        }
-
+    public List<Pedido> ordenarRota(List<Pedido> pedidos) {
         List<Pedido> restantes = new ArrayList<>(pedidos);
+        List<Pedido> rota = new ArrayList<>();
+
         double x = BASE_X;
         double y = BASE_Y;
-        double distanciaTotal = 0.0;
 
         while (!restantes.isEmpty()) {
             final double atualX = x;
@@ -143,10 +138,28 @@ public class PedidoService {
                             p -> calcularDistancia(atualX, atualY, p.getCoordenadaX(), p.getCoordenadaY())))
                     .orElseThrow();
 
-            distanciaTotal += calcularDistancia(atualX, atualY, maisProximo.getCoordenadaX(), maisProximo.getCoordenadaY());
+            rota.add(maisProximo);
+            restantes.remove(maisProximo);
             x = maisProximo.getCoordenadaX();
             y = maisProximo.getCoordenadaY();
-            restantes.remove(maisProximo);
+        }
+
+        return rota;
+    }
+
+    public double distanciaDaRotaOrdenada(List<Pedido> rota) {
+        if (rota.isEmpty()) {
+            return 0.0;
+        }
+
+        double x = BASE_X;
+        double y = BASE_Y;
+        double distanciaTotal = 0.0;
+
+        for (Pedido pedido : rota) {
+            distanciaTotal += calcularDistancia(x, y, pedido.getCoordenadaX(), pedido.getCoordenadaY());
+            x = pedido.getCoordenadaX();
+            y = pedido.getCoordenadaY();
         }
 
         // volta pra base ao final da rota
@@ -155,29 +168,42 @@ public class PedidoService {
         return distanciaTotal;
     }
 
+    private double calcularDistanciaRota(List<Pedido> pedidos) {
+        return distanciaDaRotaOrdenada(ordenarRota(pedidos));
+    }
+
     private void despacharViagem(Drone drone, List<Pedido> manifesto) {
-        double distanciaRota = calcularDistanciaRota(manifesto);
-        double tempoHoras = distanciaRota / VELOCIDADE_DRONE_KM_H;
-        double tempoMinutos = Math.round(tempoHoras * 60 * 100.0) / 100.0;
+        List<Pedido> rota = ordenarRota(manifesto);
+
+        double distanciaRota = distanciaDaRotaOrdenada(rota);
+        double tempoTotalMinutos = arredondar(
+                TEMPO_CARREGAMENTO_MINUTOS
+                        + minutosParaPercorrer(distanciaRota)
+                        + TEMPO_ENTREGA_MINUTOS * rota.size());
 
         String viagemId = UUID.randomUUID().toString();
 
-        drone.setStatus(StatusDrone.EM_VOO);
-        drone.setBateriaAtual(drone.getBateriaAtual() - distanciaRota);
+        drone.setStatus(StatusDrone.CARREGANDO);
+        drone.setViagemAtualId(viagemId);
+        drone.setParadaAtual(0);
+        drone.setTempoRestanteEtapaMinutos(TEMPO_CARREGAMENTO_MINUTOS);
+        drone.setBateriaAtual(arredondar(drone.getBateriaAtual() - distanciaRota));
         droneRepository.save(drone);
 
-        for (Pedido pedido : manifesto) {
+        for (int i = 0; i < rota.size(); i++) {
+            Pedido pedido = rota.get(i);
             pedido.setDroneAlocado(drone);
             pedido.setStatus(StatusPedido.EM_TRANSPORTE);
-            pedido.setTempoEstimadoMinutos(tempoMinutos);
-            pedido.setDistanciaRotaKm(Math.round(distanciaRota * 100.0) / 100.0);
+            pedido.setTempoEstimadoMinutos(tempoTotalMinutos);
+            pedido.setDistanciaRotaKm(arredondar(distanciaRota));
             pedido.setViagemId(viagemId);
+            pedido.setOrdemNaRota(i);
             pedido.setMotivoBloqueio(null);
             pedidoRepository.save(pedido);
         }
     }
 
-    // concluir entrega
+    // conclusão manual 
     public Pedido concluirEntrega(String pedidoId) {
         Pedido pedido = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado com o ID: " + pedidoId));
@@ -204,9 +230,16 @@ public class PedidoService {
                         && p.getStatus() == StatusPedido.EM_TRANSPORTE);
 
         if (!aindaHaPedidosDaMesmaViagemEmTransporte) {
-            drone.setStatus(StatusDrone.IDLE);
+            encerrarViagem(drone);
             droneRepository.save(drone);
         }
+    }
+
+    public void encerrarViagem(Drone drone) {
+        drone.setStatus(StatusDrone.IDLE);
+        drone.setViagemAtualId(null);
+        drone.setParadaAtual(null);
+        drone.setTempoRestanteEtapaMinutos(0.0);
     }
 
     // dashboard
@@ -238,7 +271,7 @@ public class PedidoService {
         dashboard.put("totalPedidos", todosPedidos.size());
         dashboard.put("entregasRealizadas", entregasRealizadas);
         dashboard.put("pedidosNaFila", pedidosPendentes);
-        dashboard.put("tempoMedioMinutos", Math.round(tempoMedioMinutos * 100.0) / 100.0);
+        dashboard.put("tempoMedioMinutos", ParametrosSimulacao.arredondar(tempoMedioMinutos));
         dashboard.put("totalDrones", todosDrones.size());
         dashboard.put("totalViagens", totalViagens);
 

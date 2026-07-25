@@ -7,8 +7,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 @Entity
 @Data
 @NoArgsConstructor
@@ -32,5 +30,11 @@ public class Drone {
 
     @Enumerated(EnumType.STRING)
     private StatusDrone status = StatusDrone.IDLE;
-    
+
+    private String viagemAtualId;
+
+    private Integer paradaAtual;
+
+    private Double tempoRestanteEtapaMinutos;
+
 }

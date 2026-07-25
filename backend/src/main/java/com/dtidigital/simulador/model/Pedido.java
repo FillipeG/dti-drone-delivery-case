@@ -47,4 +47,6 @@ public class Pedido {
 
     private Double distanciaRotaKm;
 
+    private Integer ordemNaRota;
+
 }
