@@ -1,0 +1,24 @@
+.stat-tile {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+}
+
+.stat-tile__label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0 0 6px;
+}
+
+.stat-tile__value {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--dti-navy);
+}
+
+.stat-tile__value--highlight {
+  color: var(--dti-orange);
+}
