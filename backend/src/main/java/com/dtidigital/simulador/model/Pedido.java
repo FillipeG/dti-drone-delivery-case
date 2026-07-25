@@ -7,8 +7,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 @Entity
 @Data
 @NoArgsConstructor
@@ -44,5 +42,9 @@ public class Pedido {
     private Double tempoEstimadoMinutos;
 
     private String motivoBloqueio;
+
+    private String viagemId;
+
+    private Double distanciaRotaKm;
 
 }
