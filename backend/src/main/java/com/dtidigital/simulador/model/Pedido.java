@@ -42,5 +42,7 @@ public class Pedido {
     private Drone droneAlocado;
 
     private Double tempoEstimadoMinutos;
-    
+
+    private String motivoBloqueio;
+
 }

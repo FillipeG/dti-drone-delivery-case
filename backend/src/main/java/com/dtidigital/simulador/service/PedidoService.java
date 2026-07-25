@@ -16,10 +16,11 @@ public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
     private final DroneRepository droneRepository;
+    private final ZonaExclusaoService zonaExclusaoService;
 
     private static final double BASE_X = 0.0;
     private static final double BASE_Y = 0.0;
-    private static final double VELOCIDADE_DRONE_KM_H = 30.0; 
+    private static final double VELOCIDADE_DRONE_KM_H = 30.0;
 
     public Pedido criarPedido(PedidoDTO dto) {
         Pedido pedido = new Pedido();
@@ -51,7 +52,7 @@ public class PedidoService {
 
     // fila de prioridade e processamento lote
     public void processarFila() {
-        
+
         List<Pedido> pedidosPendentes = pedidoRepository.findAll().stream()
                 .filter(p -> p.getStatus() == StatusPedido.PENDENTE)
                 .collect(Collectors.toList());
@@ -59,6 +60,18 @@ public class PedidoService {
         pedidosPendentes.sort(Comparator.comparing(Pedido::getPrioridade).reversed());
 
         for (Pedido pedido : pedidosPendentes) {
+
+            // verifica se a rota até o pedido cruza alguma zona de exclusão aérea
+            Optional<ZonaExclusao> zonaBloqueando = zonaExclusaoService.verificarBloqueio(
+                    BASE_X, BASE_Y, pedido.getCoordenadaX(), pedido.getCoordenadaY());
+
+            if (zonaBloqueando.isPresent()) {
+                pedido.setMotivoBloqueio(
+                        "Rota bloqueada pela zona de exclusão: " + zonaBloqueando.get().getNome());
+                pedidoRepository.save(pedido);
+                continue;
+            }
+
             double distanciaIda = calcularDistanciaDaBase(pedido.getCoordenadaX(), pedido.getCoordenadaY());
             double distanciaIdaEVolta = distanciaIda * 2;
 
@@ -83,6 +96,7 @@ public class PedidoService {
                 pedido.setDroneAlocado(drone);
                 pedido.setStatus(StatusPedido.EM_TRANSPORTE);
                 pedido.setTempoEstimadoMinutos(tempoMinutos);
+                pedido.setMotivoBloqueio(null);
                 pedidoRepository.save(pedido);
             }
         }
@@ -95,7 +109,7 @@ public class PedidoService {
 
         if (pedido.getDroneAlocado() != null) {
             Drone drone = pedido.getDroneAlocado();
-            drone.setStatus(StatusDrone.IDLE); 
+            drone.setStatus(StatusDrone.IDLE);
             droneRepository.save(drone);
         }
 
