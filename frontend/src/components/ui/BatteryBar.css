@@ -1,0 +1,39 @@
+.battery-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 100px;
+}
+
+.battery-bar__track {
+  flex: 1;
+  height: 6px;
+  border-radius: 4px;
+  background: var(--color-neutral-bg);
+  overflow: hidden;
+}
+
+.battery-bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.2s;
+}
+
+.battery-bar__fill--alta {
+  background: var(--color-success-text);
+}
+
+.battery-bar__fill--media {
+  background: var(--dti-orange);
+}
+
+.battery-bar__fill--baixa {
+  background: var(--color-danger-text);
+}
+
+.battery-bar__label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  width: 34px;
+  text-align: right;
+}

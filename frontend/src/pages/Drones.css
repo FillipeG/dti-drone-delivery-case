@@ -1,0 +1,57 @@
+.drones-form-card {
+  margin: 16px 0 20px;
+}
+
+.drones-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.drones-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.drones-form__field input {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 14px;
+  width: 160px;
+}
+
+.drones-form__erro {
+  color: var(--color-danger-text);
+  font-size: 13px;
+  margin: 12px 0 0;
+}
+
+.drones-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.drones-table th {
+  text-align: left;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  padding: 0 8px 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.drones-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.drones-table tr:last-child td {
+  border-bottom: none;
+}
