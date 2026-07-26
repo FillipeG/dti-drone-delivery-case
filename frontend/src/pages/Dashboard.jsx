@@ -5,6 +5,7 @@ import Badge from '../components/ui/Badge'
 import StatTile from '../components/ui/StatTile'
 import EntregasMap from '../components/ui/EntregasMap'
 import ZonasExclusaoModal from '../components/ui/ZonasExclusaoModal'
+import { useToast } from '../components/ui/useToast'
 import { obterDashboard } from '../api/dashboard'
 import { obterStatusSimulacao, avancarTempo, definirAutomatica } from '../api/simulacao'
 import { listarStatusDrones } from '../api/drones'
@@ -14,6 +15,7 @@ import { droneStatusLabel, droneStatusTone } from '../utils/droneStatus'
 import './Dashboard.css'
 
 function Dashboard() {
+  const showToast = useToast()
   const [dados, setDados] = useState(null)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState(null)
@@ -110,6 +112,7 @@ function Dashboard() {
     try {
       const novoStatus = await definirAutomatica(!simulacao.automatica)
       setSimulacao(novoStatus)
+      showToast(novoStatus.automatica ? 'Simulação automática ativada!' : 'Simulação automática desativada!')
     } catch (err) {
       setErroSimulacao(err.message)
     } finally {

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import Modal from './Modal'
 import Button from './Button'
+import { useToast } from './useToast'
 import { listarZonas, cadastrarZona, removerZona } from '../../api/zonasExclusao'
 import './ZonasExclusaoModal.css'
 
 const FORM_INICIAL = { nome: '', coordenadaX: '', coordenadaY: '', raioKm: '' }
 
 function ZonasExclusaoModal({ onClose }) {
+  const showToast = useToast()
   const [zonas, setZonas] = useState([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState(null)
@@ -61,6 +63,7 @@ function ZonasExclusaoModal({ onClose }) {
       })
       setForm(FORM_INICIAL)
       await carregarZonas()
+      showToast('Zona cadastrada!')
     } catch (err) {
       setErroForm(err.message)
     } finally {
@@ -73,6 +76,7 @@ function ZonasExclusaoModal({ onClose }) {
     try {
       await removerZona(id)
       await carregarZonas()
+      showToast('Zona removida!')
     } catch (err) {
       setErro(err.message)
     } finally {

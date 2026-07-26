@@ -3,6 +3,7 @@ import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import BatteryBar from '../components/ui/BatteryBar'
+import { useToast } from '../components/ui/useToast'
 import { listarStatusDrones, cadastrarDrone, recarregarDrone } from '../api/drones'
 import { droneStatusLabel, droneStatusTone } from '../utils/droneStatus'
 import './Drones.css'
@@ -10,6 +11,7 @@ import './Drones.css'
 const FORM_INICIAL = { capacidadeMaximaPeso: '', autonomiaMaximaKm: '' }
 
 function Drones() {
+  const showToast = useToast()
   const [drones, setDrones] = useState([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState(null)
@@ -66,6 +68,7 @@ function Drones() {
       })
       setForm(FORM_INICIAL)
       await carregarDrones()
+      showToast('Drone cadastrado!')
     } catch (err) {
       setErroForm(err.message)
     } finally {
@@ -78,6 +81,7 @@ function Drones() {
     try {
       await recarregarDrone(id)
       await carregarDrones()
+      showToast('Drone recarregado!')
     } catch (err) {
       setErro(err.message)
     } finally {

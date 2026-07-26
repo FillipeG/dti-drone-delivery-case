@@ -3,6 +3,7 @@ import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import RotaModal from '../components/ui/RotaModal'
+import { useToast } from '../components/ui/useToast'
 import { listarPedidos, criarPedido, concluirPedido, rastrearPedido, processarFila } from '../api/pedidos'
 import { prioridadeLabel, prioridadeTone, statusPedidoLabel, statusPedidoTone } from '../utils/pedidoLabels'
 import './Pedidos.css'
@@ -10,6 +11,7 @@ import './Pedidos.css'
 const FORM_INICIAL = { coordenadaX: '', coordenadaY: '', peso: '', prioridade: 'MEDIA' }
 
 function Pedidos() {
+  const showToast = useToast()
   const [pedidos, setPedidos] = useState([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState(null)
@@ -72,6 +74,7 @@ function Pedidos() {
       })
       setForm(FORM_INICIAL)
       await carregarPedidos()
+      showToast('Pedido criado!')
     } catch (err) {
       setErroForm(err.message)
     } finally {
@@ -84,6 +87,7 @@ function Pedidos() {
     try {
       await concluirPedido(id)
       await carregarPedidos()
+      showToast('Pedido concluído!')
     } catch (err) {
       setErro(err.message)
     } finally {
@@ -96,6 +100,7 @@ function Pedidos() {
     try {
       await processarFila()
       await carregarPedidos()
+      showToast('Fila reprocessada!')
     } catch (err) {
       setErro(err.message)
     } finally {
