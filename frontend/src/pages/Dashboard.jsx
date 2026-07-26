@@ -5,6 +5,8 @@ import Badge from '../components/ui/Badge'
 import StatTile from '../components/ui/StatTile'
 import { obterDashboard } from '../api/dashboard'
 import { obterStatusSimulacao, avancarTempo, definirAutomatica } from '../api/simulacao'
+import { listarStatusDrones } from '../api/drones'
+import { droneStatusLabel, droneStatusTone } from '../utils/droneStatus'
 import './Dashboard.css'
 
 function Dashboard() {
@@ -12,6 +14,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState(null)
 
+  const [drones, setDrones] = useState([])
   const [simulacao, setSimulacao] = useState(null)
   const [minutosInput, setMinutosInput] = useState('5')
   const [avancando, setAvancando] = useState(false)
@@ -30,11 +33,12 @@ function Dashboard() {
   useEffect(() => {
     let cancelado = false
 
-    Promise.all([obterDashboard(), obterStatusSimulacao()])
-      .then(([dadosDashboard, statusSimulacao]) => {
+    Promise.all([obterDashboard(), obterStatusSimulacao(), listarStatusDrones()])
+      .then(([dadosDashboard, statusSimulacao, statusDrones]) => {
         if (!cancelado) {
           setDados(dadosDashboard)
           setSimulacao(statusSimulacao)
+          setDrones(statusDrones)
           setErro(null)
         }
       })
@@ -54,10 +58,11 @@ function Dashboard() {
     if (!simulacao?.automatica) return undefined
 
     const intervalo = setInterval(() => {
-      Promise.all([obterStatusSimulacao(), obterDashboard()])
-        .then(([statusSimulacao, dadosDashboard]) => {
+      Promise.all([obterStatusSimulacao(), obterDashboard(), listarStatusDrones()])
+        .then(([statusSimulacao, dadosDashboard, statusDrones]) => {
           setSimulacao(statusSimulacao)
           setDados(dadosDashboard)
+          setDrones(statusDrones)
         })
         .catch(() => {})
     }, 2000)
@@ -152,6 +157,19 @@ function Dashboard() {
           </div>
 
           {erroSimulacao && <p className="dashboard__erro">{erroSimulacao}</p>}
+        </Card>
+      )}
+
+      {drones.length > 0 && (
+        <Card title="Status da frota" className="dashboard__frota-card">
+          <div className="dashboard__frota">
+            {drones.map((drone) => (
+              <div key={drone.id} className="dashboard__frota-item">
+                <span>{drone.id.slice(0, 8)}</span>
+                <Badge tone={droneStatusTone(drone.status)}>{droneStatusLabel(drone.status)}</Badge>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
     </div>

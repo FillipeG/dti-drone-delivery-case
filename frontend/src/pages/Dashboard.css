@@ -46,6 +46,30 @@
   width: 80px;
 }
 
+.dashboard__frota-card {
+  margin-top: 20px;
+}
+
+.dashboard__frota {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dashboard__frota-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dashboard__frota-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
 @media (max-width: 800px) {
   .dashboard__kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
