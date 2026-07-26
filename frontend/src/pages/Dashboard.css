@@ -10,6 +10,42 @@
   font-size: 13px;
 }
 
+.dashboard__simulacao-card {
+  margin-top: 20px;
+}
+
+.dashboard__simulacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.dashboard__simulacao-info p {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.dashboard__simulacao-info p:last-child {
+  margin-bottom: 0;
+  color: var(--color-text-secondary);
+}
+
+.dashboard__simulacao-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard__simulacao-form input {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 14px;
+  width: 80px;
+}
+
 @media (max-width: 800px) {
   .dashboard__kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
