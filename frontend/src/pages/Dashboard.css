@@ -46,7 +46,10 @@
   width: 80px;
 }
 
-.dashboard__frota-card {
+.dashboard__mapa-frota {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 12px;
   margin-top: 20px;
 }
 
@@ -73,5 +76,9 @@
 @media (max-width: 800px) {
   .dashboard__kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard__mapa-frota {
+    grid-template-columns: 1fr;
   }
 }

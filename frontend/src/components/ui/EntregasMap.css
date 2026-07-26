@@ -1,0 +1,63 @@
+.entregas-map {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  background-image: linear-gradient(var(--color-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+  background-size: 24px 24px;
+  overflow: hidden;
+}
+
+.entregas-map__marcador {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 2px rgba(10, 10, 92, 0.15);
+}
+
+.entregas-map__marcador--base {
+  width: 14px;
+  height: 14px;
+  background: var(--dti-navy);
+  z-index: 1;
+}
+
+.entregas-map__marcador--pedido {
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.entregas-map__marcador--pedido:hover {
+  transform: translate(-50%, -50%) scale(1.6);
+  z-index: 2;
+}
+
+.entregas-map__legenda {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.entregas-map__detalhe p {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.entregas-map__detalhe p:last-child {
+  margin-bottom: 0;
+}
+
+.entregas-map__detalhe-badges {
+  display: flex;
+  gap: 8px;
+}

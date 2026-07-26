@@ -3,9 +3,11 @@ import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
 import StatTile from '../components/ui/StatTile'
+import EntregasMap from '../components/ui/EntregasMap'
 import { obterDashboard } from '../api/dashboard'
 import { obterStatusSimulacao, avancarTempo, definirAutomatica } from '../api/simulacao'
 import { listarStatusDrones } from '../api/drones'
+import { listarPedidos } from '../api/pedidos'
 import { droneStatusLabel, droneStatusTone } from '../utils/droneStatus'
 import './Dashboard.css'
 
@@ -14,6 +16,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState(null)
 
+  const [pedidos, setPedidos] = useState([])
   const [drones, setDrones] = useState([])
   const [simulacao, setSimulacao] = useState(null)
   const [minutosInput, setMinutosInput] = useState('5')
@@ -33,12 +36,13 @@ function Dashboard() {
   useEffect(() => {
     let cancelado = false
 
-    Promise.all([obterDashboard(), obterStatusSimulacao(), listarStatusDrones()])
-      .then(([dadosDashboard, statusSimulacao, statusDrones]) => {
+    Promise.all([obterDashboard(), obterStatusSimulacao(), listarStatusDrones(), listarPedidos()])
+      .then(([dadosDashboard, statusSimulacao, statusDrones, listaPedidos]) => {
         if (!cancelado) {
           setDados(dadosDashboard)
           setSimulacao(statusSimulacao)
           setDrones(statusDrones)
+          setPedidos(listaPedidos)
           setErro(null)
         }
       })
@@ -58,11 +62,12 @@ function Dashboard() {
     if (!simulacao?.automatica) return undefined
 
     const intervalo = setInterval(() => {
-      Promise.all([obterStatusSimulacao(), obterDashboard(), listarStatusDrones()])
-        .then(([statusSimulacao, dadosDashboard, statusDrones]) => {
+      Promise.all([obterStatusSimulacao(), obterDashboard(), listarStatusDrones(), listarPedidos()])
+        .then(([statusSimulacao, dadosDashboard, statusDrones, listaPedidos]) => {
           setSimulacao(statusSimulacao)
           setDados(dadosDashboard)
           setDrones(statusDrones)
+          setPedidos(listaPedidos)
         })
         .catch(() => {})
     }, 2000)
@@ -160,18 +165,24 @@ function Dashboard() {
         </Card>
       )}
 
-      {drones.length > 0 && (
-        <Card title="Status da frota" className="dashboard__frota-card">
-          <div className="dashboard__frota">
-            {drones.map((drone) => (
-              <div key={drone.id} className="dashboard__frota-item">
-                <span>{drone.id.slice(0, 8)}</span>
-                <Badge tone={droneStatusTone(drone.status)}>{droneStatusLabel(drone.status)}</Badge>
-              </div>
-            ))}
-          </div>
+      <div className="dashboard__mapa-frota">
+        <Card title="Mapa das entregas" className="dashboard__mapa-card">
+          <EntregasMap pedidos={pedidos} />
         </Card>
-      )}
+
+        {drones.length > 0 && (
+          <Card title="Status da frota" className="dashboard__frota-card">
+            <div className="dashboard__frota">
+              {drones.map((drone) => (
+                <div key={drone.id} className="dashboard__frota-item">
+                  <span>{drone.id.slice(0, 8)}</span>
+                  <Badge tone={droneStatusTone(drone.status)}>{droneStatusLabel(drone.status)}</Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }
