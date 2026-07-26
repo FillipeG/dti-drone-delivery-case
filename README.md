@@ -1,6 +1,6 @@
 # 🚁 Simulador de Entregas em Drone
 
-Simulador de operação logística por drones em ambiente urbano, desenvolvido como desafio técnico para o processo seletivo da **dti digital** (Enterprise Hakuna). O sistema aloca pedidos em drones respeitando capacidade, autonomia, prioridade e zonas de exclusão aérea, simula o voo em tempo acelerado e expõe tudo isso numa interface web.
+Simulador de operação logística por drones em ambiente urbano, desenvolvido como desafio técnico para o processo seletivo da **dti digital**. O sistema aloca pedidos em drones respeitando capacidade, autonomia, prioridade e zonas de exclusão aérea, simula o voo em tempo acelerado e expõe tudo isso numa interface web.
 
 ![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F?logo=springboot&logoColor=white)
@@ -21,6 +21,7 @@ Simulador de operação logística por drones em ambiente urbano, desenvolvido c
 - [Principais endpoints da API](#principais-endpoints-da-api)
 - [Decisões técnicas](#decisões-técnicas)
 - [Estrutura do projeto](#estrutura-do-projeto)
+- [Uso de IA no desenvolvimento](#uso-de-ia-no-desenvolvimento)
 - [Autor](#autor)
 
 ---
@@ -177,6 +178,32 @@ dti-drone-delivery-case/
         ├── api/          # Camada de acesso à API
         └── utils/        # Mapeamento de labels/cores por status
 ```
+
+## Uso de IA no desenvolvimento
+
+O projeto foi desenvolvido em 3 dias, com apoio de IA em momentos diferentes e por motivos diferentes — documentando de forma transparente, como sugerido no processo seletivo:
+
+**Dia 1 — Regras de negócio obrigatórias.**
+Comecei pelas regras básicas do case (as mais simples de resolver) e usei o **Gemini** de forma pontual: pra me ajudar com a estrutura inicial do projeto e como apoio na correção de erros enquanto implementava. A lógica dessas regras foi escrita por mim e a IA funcionou como revisora/auxiliar de correção.
+
+**Dia 2 — Regras opcionais e diferenciais.**
+Ao migrar pras funcionalidades opcionais, a complexidade aumentou bastante — vários pontos exigiam algoritmos que eu não dominava ou dominava pouco (otimização de alocação, máquina de estados da simulação, geometria das zonas de exclusão). Passei a usar o **Claude** como parceiro de desenvolvimento: ele explicava os algoritmos e me apresentava as opções possíveis e seus trade-offs (ex: otimização via knapsack vs. busca exaustiva; bloquear vs. desviar de zonas de exclusão), eu avaliava e decidia o caminho e arquitetura, com implementação feita em conjunto. Ainda no segundo dia, comecei a estrutura base do frontend — os componentes reutilizáveis (header, footer, modais etc.).
+
+**Dia 3 — Frontend e documentação.**
+Terminei as telas do frontend e montei este README, ambos com apoio do Claude. Ele também ajudou a estruturar um escopo de testes mais amplo e preciso, cobrindo de forma otimizada as regras construídas — incluindo o teste de carga com 300 pedidos.
+
+### Prompts que guiaram o desenvolvimento
+
+Para garantir o protagonismo técnico e a consistência da arquitetura, o desenvolvimento com apoio de IA seguiu três prompts contextuais principais:
+
+**1. Prompt de Contextualização do Projeto**
+> *"Estamos desenvolvendo um Simulador de Entregas por Drones para um desafio técnico. O sistema deve gerenciar pedidos (localização X/Y, peso, prioridade), frotas de drones (capacidade kg, autonomia km) e realizar alocações otimizadas minimizando viagens, além de simular estados (Idle, Em Voo, Entregando, etc.)."*
+
+**2. Prompt de Arquitetura e Tecnologia**
+> *"A stack definida é Backend em Java 21 com Spring Boot 4.1 e Frontend SPA em React 19 com Vite. Mantenha o código limpo, bem testado e desacoplado. Priorize o uso de APIs RESTful bem definidas e mantenha a lógica de simulação e alocação encapsulada na camada de serviço no backend."*
+
+**3. Prompt de Co-criação e Tomada de Decisão**
+> *"Sempre que propuser uma solução para problemas complexos (ex: algoritmos de otimização, cálculo de rotas ou zonas de exclusão), apresente as opções possíveis, explique os trade-offs de cada uma e aguarde a minha avaliação e decisão sobre qual caminho e arquitetura seguir antes de implementar."*
 
 ## Autor
 
