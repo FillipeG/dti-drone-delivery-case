@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
+import RotaModal from '../components/ui/RotaModal'
 import { listarPedidos, criarPedido, concluirPedido, rastrearPedido, processarFila } from '../api/pedidos'
 import { prioridadeLabel, prioridadeTone, statusPedidoLabel, statusPedidoTone } from '../utils/pedidoLabels'
 import './Pedidos.css'
@@ -21,6 +22,7 @@ function Pedidos() {
   const [rastreio, setRastreio] = useState(null)
   const [rastreioCarregandoId, setRastreioCarregandoId] = useState(null)
   const [reprocessando, setReprocessando] = useState(false)
+  const [viagemSelecionada, setViagemSelecionada] = useState(null)
 
   async function carregarPedidos() {
     try {
@@ -236,6 +238,11 @@ function Pedidos() {
                     >
                       {rastreioCarregandoId === pedido.id ? '...' : 'Rastrear'}
                     </Button>
+                    {pedido.viagemId && (
+                      <Button variant="ghost" onClick={() => setViagemSelecionada(pedido.viagemId)}>
+                        Ver rota
+                      </Button>
+                    )}
                     {pedido.status === 'EM_TRANSPORTE' && (
                       <Button
                         variant="secondary"
@@ -252,6 +259,10 @@ function Pedidos() {
           </table>
         )}
       </Card>
+
+      {viagemSelecionada && (
+        <RotaModal viagemId={viagemSelecionada} onClose={() => setViagemSelecionada(null)} />
+      )}
     </div>
   )
 }
