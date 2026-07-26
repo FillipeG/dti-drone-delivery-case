@@ -10,6 +10,21 @@
   overflow: hidden;
 }
 
+.entregas-map__zona {
+  position: absolute;
+  padding: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 106, 61, 0.12);
+  border: 1.5px dashed var(--dti-orange);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.entregas-map__zona:hover {
+  background: rgba(255, 106, 61, 0.22);
+}
+
 .entregas-map__marcador {
   position: absolute;
   width: 10px;

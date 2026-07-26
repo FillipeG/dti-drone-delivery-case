@@ -4,10 +4,12 @@ import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
 import StatTile from '../components/ui/StatTile'
 import EntregasMap from '../components/ui/EntregasMap'
+import ZonasExclusaoModal from '../components/ui/ZonasExclusaoModal'
 import { obterDashboard } from '../api/dashboard'
 import { obterStatusSimulacao, avancarTempo, definirAutomatica } from '../api/simulacao'
 import { listarStatusDrones } from '../api/drones'
 import { listarPedidos } from '../api/pedidos'
+import { listarZonas } from '../api/zonasExclusao'
 import { droneStatusLabel, droneStatusTone } from '../utils/droneStatus'
 import './Dashboard.css'
 
@@ -17,12 +19,14 @@ function Dashboard() {
   const [erro, setErro] = useState(null)
 
   const [pedidos, setPedidos] = useState([])
+  const [zonas, setZonas] = useState([])
   const [drones, setDrones] = useState([])
   const [simulacao, setSimulacao] = useState(null)
   const [minutosInput, setMinutosInput] = useState('5')
   const [avancando, setAvancando] = useState(false)
   const [alternandoAutomatico, setAlternandoAutomatico] = useState(false)
   const [erroSimulacao, setErroSimulacao] = useState(null)
+  const [modalZonasAberto, setModalZonasAberto] = useState(false)
 
   function carregarDashboard() {
     return obterDashboard()
@@ -36,13 +40,14 @@ function Dashboard() {
   useEffect(() => {
     let cancelado = false
 
-    Promise.all([obterDashboard(), obterStatusSimulacao(), listarStatusDrones(), listarPedidos()])
-      .then(([dadosDashboard, statusSimulacao, statusDrones, listaPedidos]) => {
+    Promise.all([obterDashboard(), obterStatusSimulacao(), listarStatusDrones(), listarPedidos(), listarZonas()])
+      .then(([dadosDashboard, statusSimulacao, statusDrones, listaPedidos, listaZonas]) => {
         if (!cancelado) {
           setDados(dadosDashboard)
           setSimulacao(statusSimulacao)
           setDrones(statusDrones)
           setPedidos(listaPedidos)
+          setZonas(listaZonas)
           setErro(null)
         }
       })
@@ -89,6 +94,13 @@ function Dashboard() {
     } finally {
       setAvancando(false)
     }
+  }
+
+  function handleFecharModalZonas() {
+    setModalZonasAberto(false)
+    listarZonas()
+      .then(setZonas)
+      .catch(() => {})
   }
 
   async function handleAlternarAutomatico() {
@@ -166,8 +178,16 @@ function Dashboard() {
       )}
 
       <div className="dashboard__mapa-frota">
-        <Card title="Mapa das entregas" className="dashboard__mapa-card">
-          <EntregasMap pedidos={pedidos} />
+        <Card
+          title="Mapa das entregas"
+          className="dashboard__mapa-card"
+          action={
+            <Button variant="secondary" onClick={() => setModalZonasAberto(true)}>
+              Zonas de exclusão
+            </Button>
+          }
+        >
+          <EntregasMap pedidos={pedidos} zonas={zonas} />
         </Card>
 
         {drones.length > 0 && (
@@ -183,6 +203,8 @@ function Dashboard() {
           </Card>
         )}
       </div>
+
+      {modalZonasAberto && <ZonasExclusaoModal onClose={handleFecharModalZonas} />}
     </div>
   )
 }

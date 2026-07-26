@@ -4,17 +4,24 @@ import com.dtidigital.simulador.dto.ZonaExclusaoDTO;
 import com.dtidigital.simulador.exception.ResourceNotFoundException;
 import com.dtidigital.simulador.model.ZonaExclusao;
 import com.dtidigital.simulador.repository.ZonaExclusaoRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class ZonaExclusaoService {
 
     private final ZonaExclusaoRepository zonaExclusaoRepository;
+    private final PedidoService pedidoService;
+
+    // PedidoService ja depende de ZonaExclusaoService (pra checar bloqueio na
+    // hora de alocar); @Lazy quebra o ciclo, resolvendo o bean sob demanda
+    public ZonaExclusaoService(ZonaExclusaoRepository zonaExclusaoRepository, @Lazy PedidoService pedidoService) {
+        this.zonaExclusaoRepository = zonaExclusaoRepository;
+        this.pedidoService = pedidoService;
+    }
 
     public ZonaExclusao cadastrarZona(ZonaExclusaoDTO dto) {
         ZonaExclusao zona = new ZonaExclusao();
@@ -34,6 +41,7 @@ public class ZonaExclusaoService {
             throw new ResourceNotFoundException("Zona de exclusão não encontrada com o ID: " + id);
         }
         zonaExclusaoRepository.deleteById(id);
+        pedidoService.processarFila();
     }
 
     public Optional<ZonaExclusao> verificarBloqueio(double origemX, double origemY,

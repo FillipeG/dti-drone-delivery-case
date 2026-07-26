@@ -23,6 +23,9 @@ class ZonaExclusaoServiceTest {
     @Mock
     private ZonaExclusaoRepository zonaExclusaoRepository;
 
+    @Mock
+    private PedidoService pedidoService;
+
     @InjectMocks
     private ZonaExclusaoService zonaExclusaoService;
 
@@ -65,6 +68,15 @@ class ZonaExclusaoServiceTest {
         zonaExclusaoService.removerZona("z1");
 
         verify(zonaExclusaoRepository).deleteById("z1");
+    }
+
+    @Test
+    void deveReprocessarAFilaAoRemoverZona() {
+        when(zonaExclusaoRepository.existsById("z1")).thenReturn(true);
+
+        zonaExclusaoService.removerZona("z1");
+
+        verify(pedidoService).processarFila();
     }
 
     @Test

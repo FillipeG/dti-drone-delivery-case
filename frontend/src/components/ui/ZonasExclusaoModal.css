@@ -1,0 +1,47 @@
+.zonas-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.zonas-modal__form input {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+}
+
+.zonas-modal__form-linha {
+  display: flex;
+  gap: 8px;
+}
+
+.zonas-modal__erro {
+  color: var(--color-danger-text);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.zonas-modal__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.zonas-modal__lista li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
