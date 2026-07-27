@@ -45,3 +45,14 @@
   gap: 8px;
   font-size: 13px;
 }
+
+.zonas-modal__confirmacao-texto {
+  margin: 0 0 16px;
+  font-size: 14px;
+}
+
+.zonas-modal__confirmacao-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

@@ -50,6 +50,10 @@
   color: var(--color-text-secondary);
 }
 
+.pedidos-table-wrap {
+  overflow-x: auto;
+}
+
 .pedidos-table {
   width: 100%;
   border-collapse: collapse;

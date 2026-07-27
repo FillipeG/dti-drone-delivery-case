@@ -31,6 +31,10 @@
   margin: 12px 0 0;
 }
 
+.drones-table-wrap {
+  overflow-x: auto;
+}
+
 .drones-table {
   width: 100%;
   border-collapse: collapse;

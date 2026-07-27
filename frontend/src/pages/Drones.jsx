@@ -131,9 +131,12 @@ function Drones() {
         {loading && <p>Carregando frota...</p>}
         {erro && <p className="drones-form__erro">{erro}</p>}
 
-        {!loading && !erro && drones.length === 0 && <p>Nenhum drone cadastrado ainda.</p>}
+        {!loading && !erro && drones.length === 0 && (
+          <p>Sua frota está vazia — cadastre o primeiro drone acima pra começar a operar.</p>
+        )}
 
         {!loading && drones.length > 0 && (
+          <div className="drones-table-wrap">
           <table className="drones-table">
             <thead>
               <tr>
@@ -170,6 +173,7 @@ function Drones() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Card>
     </div>

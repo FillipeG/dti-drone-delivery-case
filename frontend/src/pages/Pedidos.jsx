@@ -207,9 +207,12 @@ function Pedidos() {
       >
         {loading && <p>Carregando pedidos...</p>}
         {erro && <p className="pedidos-form__erro">{erro}</p>}
-        {!loading && !erro && pedidos.length === 0 && <p>Nenhum pedido criado ainda.</p>}
+        {!loading && !erro && pedidos.length === 0 && (
+          <p>Nenhum pedido por aqui ainda — crie o primeiro pedido acima pra começar a operação.</p>
+        )}
 
         {!loading && pedidos.length > 0 && (
+          <div className="pedidos-table-wrap">
           <table className="pedidos-table">
             <thead>
               <tr>
@@ -262,6 +265,7 @@ function Pedidos() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Card>
 

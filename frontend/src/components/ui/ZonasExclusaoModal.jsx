@@ -17,6 +17,7 @@ function ZonasExclusaoModal({ onClose }) {
   const [salvando, setSalvando] = useState(false)
   const [erroForm, setErroForm] = useState(null)
   const [removendoId, setRemovendoId] = useState(null)
+  const [zonaParaRemover, setZonaParaRemover] = useState(null)
 
   function carregarZonas() {
     return listarZonas()
@@ -71,16 +72,17 @@ function ZonasExclusaoModal({ onClose }) {
     }
   }
 
-  async function handleRemover(id) {
-    setRemovendoId(id)
+  async function handleRemover(zona) {
+    setRemovendoId(zona.id)
     try {
-      await removerZona(id)
+      await removerZona(zona.id)
       await carregarZonas()
       showToast('Zona removida!')
     } catch (err) {
       setErro(err.message)
     } finally {
       setRemovendoId(null)
+      setZonaParaRemover(null)
     }
   }
 
@@ -129,7 +131,9 @@ function ZonasExclusaoModal({ onClose }) {
 
       {loading && <p>Carregando zonas...</p>}
       {erro && <p className="zonas-modal__erro">{erro}</p>}
-      {!loading && !erro && zonas.length === 0 && <p>Nenhuma zona cadastrada ainda.</p>}
+      {!loading && !erro && zonas.length === 0 && (
+        <p>Nenhuma zona cadastrada — a área toda está liberada para entregas. Cadastre uma acima se precisar restringir alguma região.</p>
+      )}
 
       {zonas.length > 0 && (
         <ul className="zonas-modal__lista">
@@ -138,12 +142,33 @@ function ZonasExclusaoModal({ onClose }) {
               <span>
                 {zona.nome} — ({zona.coordenadaX}, {zona.coordenadaY}) · raio {zona.raioKm} km
               </span>
-              <Button variant="ghost" disabled={removendoId === zona.id} onClick={() => handleRemover(zona.id)}>
-                {removendoId === zona.id ? '...' : 'Remover'}
+              <Button variant="ghost" disabled={removendoId === zona.id} onClick={() => setZonaParaRemover(zona)}>
+                Remover
               </Button>
             </li>
           ))}
         </ul>
+      )}
+
+      {zonaParaRemover && (
+        <Modal title="Remover zona" onClose={() => setZonaParaRemover(null)} width={320}>
+          <p className="zonas-modal__confirmacao-texto">
+            Tem certeza que deseja remover a zona <strong>{zonaParaRemover.nome}</strong>? Pedidos bloqueados por
+            ela poderão ser alocados normalmente depois disso.
+          </p>
+          <div className="zonas-modal__confirmacao-acoes">
+            <Button variant="ghost" onClick={() => setZonaParaRemover(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              disabled={removendoId === zonaParaRemover.id}
+              onClick={() => handleRemover(zonaParaRemover)}
+            >
+              {removendoId === zonaParaRemover.id ? 'Removendo...' : 'Remover'}
+            </Button>
+          </div>
+        </Modal>
       )}
     </Modal>
   )
